@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DS Prints Searchable POS</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="pos-container">
+      <header>
+        <h1>Transaction Calculator</h1>
+        <button class="reset-btn" onclick="resetAll()">Clear All</button>
+      </header>
+
+      <div class="search-container">
+        <input
+          type="text"
+          id="serviceSearch"
+          placeholder="Search services (e.g., 'Xerox', 'Long', 'Colored')..."
+          onkeyup="filterServices()"
+        />
+      </div>
+
+      <div class="table-summary_wrapper">
+        <div>
+          <!-- Table -->
+          <div class="table-wrapper">
+            <table class="pos-table">
+              <thead>
+                <tr>
+                  <th>Service / Item</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th class="text-center">Quantity</th>
+                </tr>
+              </thead>
+              <tbody id="service-rows"></tbody>
+            </table>
+          </div>
+          <!-- Table pagination -->
+          <div class="pagination-container">
+            <button id="prevPage" class="btn-page" onclick="changePage(-1)">
+              Previous
+            </button>
+            <span id="pageInfo">Page 1 of X</span>
+            <button id="nextPage" class="btn-page" onclick="changePage(1)">
+              Next
+            </button>
+          </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div>
+          <h3>Summary</h3>
+          <div class="summary-header">
+            <button class="copy-btn" onclick="copySummary()">
+              Copy
+            </button>
+            <hr class="dashed-line" />
+          </div>
+          <div
+            id="order-summary-container"
+            class="summary-wrapper"
+            style="display: none"
+          >
+            <table class="summary-table">
+              <thead>
+                <tr>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="summary-items"></tbody>
+            </table>
+          </div>
+          <div class="total-summary">
+            <span id="item-count">0 items</span>
+            <h2 id="grand-total">₱0.00</h2>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
