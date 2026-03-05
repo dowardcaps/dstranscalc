@@ -148,7 +148,7 @@ function changePage(direction) {
 function updatePaginationUI() {
   const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
   document.getElementById("pageInfo").innerText =
-    `Page ${currentPage} of ${totalPages}`;
+    `${currentPage} of ${totalPages}`;
 
   document.getElementById("prevPage").disabled = currentPage === 1;
   document.getElementById("nextPage").disabled = currentPage === totalPages;

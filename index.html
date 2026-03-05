@@ -41,21 +41,22 @@
               </thead>
               <tbody id="service-rows"></tbody>
             </table>
-          </div>
-          <!-- Table pagination -->
+             <!-- Table pagination -->
           <div class="pagination-container">
             <button id="prevPage" class="btn-page" onclick="changePage(-1)">
-              Previous
+              <<
             </button>
             <span id="pageInfo">Page 1 of X</span>
             <button id="nextPage" class="btn-page" onclick="changePage(1)">
-              Next
+              >>
             </button>
           </div>
+          </div>
+         
         </div>
 
         <!-- Order Summary -->
-        <div>
+        <div class="summary">
           <h3>Summary</h3>
           <div class="summary-header">
             <button class="copy-btn" onclick="copySummary()">
@@ -69,11 +70,6 @@
             style="display: none"
           >
             <table class="summary-table">
-              <thead>
-                <tr>
-                  <th>Details</th>
-                </tr>
-              </thead>
               <tbody id="summary-items"></tbody>
             </table>
           </div>
