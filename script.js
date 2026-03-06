@@ -59,6 +59,15 @@ const services = [
   { name: "Scan (15 pages up)", price: 10, group: "Scan" },
 ];
 
+const groupColors = {
+  "Printing": "#002c8a", // Blue
+  "Xerox": "#ff6e6e",    // Red
+  "Rush ID": "#8b5cf6",  // Purple
+  "Photo": "#bd7800",    // Amber/Orange
+  "Laminate": "#10b981", // Emerald/Green
+  "Scan": "#64748b"      // Slate/Gray
+};
+
 let cart = Array(services.length).fill(0);
 let currentPage = 1;
 const itemsPerPage = 9;
@@ -77,16 +86,21 @@ function renderTable() {
   const endIndex = startIndex + itemsPerPage;
   const pageData = filteredData.slice(startIndex, endIndex);
 
-  pageData.forEach((s) => {
-    // Find the original index in the main services array for the cart
+pageData.forEach((s) => {
     const originalIndex = services.indexOf(s);
+    // Get the color for the group, default to gray if not found
+    const badgeColor = groupColors[s.group] || "#64748b";
 
     const row = document.createElement("tr");
     if (cart[originalIndex] > 0) row.className = "active-row";
 
     row.innerHTML = `
     <td><strong>${s.name}</strong></td>
-    <td><span class="badge">${s.group}</span></td>
+    <td>
+        <span class="badge" style="background-color: ${badgeColor}; color: white; padding: 4px 8px; border-radius: 6px; font-size: 1rem; font-weight: 700;">
+            ${s.group}
+        </span>
+    </td>
     <td class="price-cell">₱${s.price.toFixed(2)}</td>
     <td>
         <div class="controls">
@@ -101,7 +115,7 @@ function renderTable() {
     </td>
 `;
     tbody.appendChild(row);
-  });
+});
 
   updatePaginationUI();
 }
@@ -194,16 +208,18 @@ function updateSummary() {
   // Always ensure the container is visible
   summaryContainer.style.display = "block";
 
-  if (hasItems) {
+if (hasItems) {
     for (const group in groups) {
-      detailsText += `<strong>${group}</strong>\n`;
+      const headerColor = groupColors[group] || "#000";
+      // Adding color to the group name in the summary table
+      detailsText += `<strong style="color: ${headerColor}">${group}</strong>\n`;
       detailsText += groups[group].join(",\n") + "\n\n";
     }
 
     const row = document.createElement("tr");
     row.innerHTML = `<td class="details-content">${detailsText}</td>`;
     summaryItems.appendChild(row);
-  } else {
+} else {
     // Show a placeholder or empty row so the table doesn't look broken
     const row = document.createElement("tr");
     row.innerHTML = `<td class="details-content" style="color: #94a3b8; font-style: italic;">No items added yet...</td>`;
