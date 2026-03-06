@@ -218,14 +218,29 @@ function changeQty(index, delta) {
   updateSummary(); // This MUST be here to show the summary
   renderTable();
 }
+
 function resetAll() {
   if (confirm("Clear current order?")) {
+    // 1. Reset the cart quantities
     cart = Array(services.length).fill(0);
+    
+    // 2. Clear the search input field
+    const searchInput = document.getElementById("serviceSearch");
+    if (searchInput) {
+      searchInput.value = "";
+    }
+    
+    // 3. Reset the filter and data view
+    // Calling filterServices() while the search input is empty 
+    // will set filteredData back to the full services list.
+    filterServices(); 
+    
+    // 4. Update the UI components
     updateTotals();
-    renderTable(services);
-    document.getElementById("serviceSearch").value = "";
-    const summaryItems = document.getElementById("summary-items");
-    summaryItems.innerHTML = "";
+    updateSummary();
+    
+    // No need to call renderTable() separately because 
+    // filterServices() already calls it.
   }
 }
 
@@ -251,7 +266,7 @@ function copySummary() {
   // 2. Format the text block
   let textToCopy = ``;
   for (const group in groups) {
-    textToCopy += `\n[${group}]\n${groups[group].join("\n")}\n`;
+    textToCopy += `[${group}]\n${groups[group].join("\n")}\n`;
   }
   textToCopy += ``;
 
