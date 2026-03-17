@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DS Prints Transaction Calculator</title>
     <link rel="stylesheet" href="style.css" />
-    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png" />
     <link
       href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap"
       rel="stylesheet"
@@ -13,10 +13,11 @@
   </head>
   <body>
     <div class="tabs-container">
-    <div id="tabs-list" class="tabs-list">
-        </div>
-    <button class="add-tab-btn" onclick="addNewTransaction()">+ New Transaction</button>
-</div>
+      <div id="tabs-list" class="tabs-list"></div>
+      <button class="add-tab-btn" onclick="addNewTransaction()">
+        + New Transaction
+      </button>
+    </div>
 
     <div class="pos-container">
       <header>
@@ -32,7 +33,50 @@
           onkeyup="filterServices()"
         />
       </div>
+<div class="admin-controls-wrapper">
+    <button id="btn-manage-toggle" class="btn-admin-main" onclick="unlockAdmin()">
+        🔒 Manage Services / Item
+    </button>
+    <div id="admin-secondary-actions" style="display: none;">
+        <button id="btn-delete-mode" class="btn-secondary" onclick="toggleDeleteMode()">
+            🗑️ Select Items to Delete
+        </button>
+        <button id="btn-confirm-delete" class="btn-danger" onclick="deleteSelected()" style="display: none;">
+            ⚠️ Confirm Permanent Delete
+        </button>
+    </div>
+</div>
 
+<div id="admin-panel" class="admin-panel-card" style="display: none;">
+    <div class="panel-header">
+        <h3>✨ Add New Service</h3>
+        <p>Fill in the details below to expand your shop's offerings.</p>
+    </div>
+    
+    <div class="admin-grid-form">
+        <div class="input-group">
+            <label>Service Name</label>
+            <input type="text" id="newItemName" placeholder="e.g., Heavy Glossy Photo">
+        </div>
+        <div class="input-group">
+            <label>Price (₱)</label>
+            <input type="number" id="newItemPrice" placeholder="0.00">
+        </div>
+        <div class="input-group">
+            <label>Category</label>
+            <select id="newItemCategory">
+                <option value="Printing">Printing</option>
+                <option value="Xerox">Xerox</option>
+                <option value="Rush ID">Rush ID</option>
+                <option value="Photo">Photo</option>
+                <option value="Laminate">Laminate</option>
+                <option value="Scan">Scan</option>
+                <option value="Stationery">Stationery</option>
+            </select>
+        </div>
+        <button class="btn-save" onclick="addNewItem()">+ Add</button>
+    </div>
+</div>
       <div class="table-summary_wrapper">
         <div>
           <!-- Table -->
@@ -48,27 +92,24 @@
               </thead>
               <tbody id="service-rows"></tbody>
             </table>
-             <!-- Table pagination -->
-          <div class="pagination-container">
-            <button id="prevPage" class="btn-page" onclick="changePage(-1)">
-              <<
-            </button>
-            <span id="pageInfo">Page 1 of X</span>
-            <button id="nextPage" class="btn-page" onclick="changePage(1)">
-              >>
-            </button>
+            <!-- Table pagination -->
+            <div class="pagination-container">
+              <button id="prevPage" class="btn-page" onclick="changePage(-1)">
+                <<
+              </button>
+              <span id="pageInfo">Page 1 of X</span>
+              <button id="nextPage" class="btn-page" onclick="changePage(1)">
+                >>
+              </button>
+            </div>
           </div>
-          </div>
-         
         </div>
 
         <!-- Order Summary -->
         <div class="summary">
           <h3>Summary</h3>
           <div class="summary-header">
-            <button class="copy-btn" onclick="copySummary()">
-              Copy
-            </button>
+            <button class="copy-btn" onclick="copySummary()">Copy</button>
             <hr class="dashed-line" />
           </div>
           <div

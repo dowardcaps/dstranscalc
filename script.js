@@ -1,64 +1,82 @@
-const services = [
-  // DOCUMENT PRINTING
-  { name: "Letter (B&W)", price: 5, group: "Printing" },
-  { name: "A4 (B&W)", price: 5, group: "Printing" },
-  { name: "Long (B&W)", price: 7, group: "Printing" },
-  { name: "Back to back Add (B&W)", price: 2, group: "Printing" },
-  { name: "Letter (Partial)", price: 7, group: "Printing" },
-  { name: "A4 (Partial)", price: 7, group: "Printing" },
-  { name: "Long (Partial)", price: 8, group: "Printing" },
-  { name: "Back to back Add (Partial)", price: 5, group: "Printing" },
-  { name: "Letter (Full Color)", price: 10, group: "Printing" },
-  { name: "A4 (Full Color)", price: 10, group: "Printing" },
-  { name: "Long (Full Color)", price: 15, group: "Printing" },
-  { name: "Back to back Add (Full)", price: 5, group: "Printing" },
+let services = [];
+let cart = []; // Start empty
+let filteredData = []; // Start empty
+let adminPassword = ""; // Stores password for the session
+let isDeleteMode = false;
+let itemsToDelete = new Set(); // Stores IDs of checked items
 
-  // XEROX
-  { name: "Letter (B&W)", price: 4, group: "Xerox" },
-  { name: "A4 (B&W)", price: 4, group: "Xerox" },
-  { name: "Long (B&W)", price: 5, group: "Xerox" },
-  { name: "Back to back Add (B&W)", price: 2, group: "Xerox" },
-  { name: "Letter (Partial)", price: 6, group: "Xerox" },
-  { name: "A4 (Partial)", price: 6, group: "Xerox" },
-  { name: "Long (Partial)", price: 7, group: "Xerox" },
-  { name: "Back to back Add (Partial)", price: 5, group: "Xerox" },
-  { name: "Letter (Full Color)", price: 9, group: "Xerox" },
-  { name: "A4 (Full Color)", price: 9, group: "Xerox" },
-  { name: "Long (Full Color)", price: 10, group: "Xerox" },
-  { name: "Back to back Add (Full)", price: 5, group: "Xerox" },
+async function unlockAdmin() {
+    const pass = prompt("Enter Admin Password:");
+    if (!pass) return;
 
-  // RUSH ID PACKAGES
-  { name: "P1 - 9pcs 1x1", price: 50, group: "Rush ID" },
-  { name: "P2 - 9pcs 2x2", price: 50, group: "Rush ID" },
-  { name: "P3 - 6pcs Passport", price: 50, group: "Rush ID" },
-  { name: "P4 - 4pcs 2x2 & 6pcs 1x1", price: 60, group: "Rush ID" },
-  { name: "P5 - 3pcs 2x2, Passport, 4pcs 1x1", price: 70, group: "Rush ID" },
-  { name: "Add-on: Change Attire", price: 10, group: "Rush ID" },
-  { name: "Add-on: Get Soft copy", price: 15, group: "Rush ID" },
+    try {
+        // Check the password against the new auth API
+        const response = await fetch('/api/auth', {
+            method: 'GET',
+            headers: { 'x-admin-password': pass }
+        });
 
-  // PHOTO PRINT
-  { name: "2R / Wallet Size", price: 15, group: "Photo" },
-  { name: '3R (3.5" x 5")', price: 20, group: "Photo" },
-  { name: '4R (4" x 6")', price: 30, group: "Photo" },
-  { name: '5R (5" x 7")', price: 40, group: "Photo" },
-  { name: '6R (6" x 8")', price: 50, group: "Photo" },
-  { name: '8R (8" x 10")', price: 50, group: "Photo" },
-  { name: "S8R / A4", price: 50, group: "Photo" },
+        if (response.ok) {
+            // SUCCESS: Only show the UI if the server says OK
+            adminPassword = pass;
+            document.getElementById('admin-panel').style.display = 'block';
+            document.getElementById('btn-delete-mode').style.display = 'inline-block';
+            document.getElementById('btn-manage-toggle').innerText = "Lock Admin";
+            
+            // Change button to a simple page reload to lock up
+            document.getElementById('btn-manage-toggle').onclick = () => location.reload();
+            console.log("Admin access granted.");
+        } else {
+            // FAILURE: Keep the UI hidden
+            alert("Access Denied: Incorrect Password.");
+        }
+    } catch (err) {
+        console.error("Auth error:", err);
+        alert("System error. Check if 'vercel dev' is running.");
+    }
+}
 
-  // LAMINATION
-  { name: "Laminate: 2R / Wallet", price: 20, group: "Laminate" },
-  { name: "Laminate: 3R", price: 30, group: "Laminate" },
-  { name: "Laminate: 4R", price: 40, group: "Laminate" },
-  { name: "Laminate: 5R", price: 50, group: "Laminate" },
-  { name: "Laminate: 6R", price: 60, group: "Laminate" },
-  { name: "Laminate: 8R", price: 60, group: "Laminate" },
-  { name: "Laminate: S8R / A4", price: 60, group: "Laminate" },
+function toggleDeleteMode() {
+    isDeleteMode = !isDeleteMode;
+    const btn = document.getElementById('btn-delete-mode');
+    const confirmBtn = document.getElementById('btn-confirm-delete');
+    
+    btn.innerText = isDeleteMode ? "Cancel Selection" : "Select Items to Delete";
+    confirmBtn.style.display = isDeleteMode ? "inline-block" : "none";
+    
+    if (!isDeleteMode) itemsToDelete.clear();
+    renderTable(); // Re-render to show/hide checkboxes
+}
 
-  // SCAN & OTHERS
-  { name: "Scan (Any size)", price: 15, group: "Scan" },
-  { name: "Scan (15 pages up)", price: 10, group: "Scan" },
-];
+async function loadServicesFromDB() {
+    console.log("Connecting to DS Prints Database...");
+    try {
+        const response = await fetch('/api/items');
+        const data = await response.json();
 
+        services = data.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: parseFloat(item.price), 
+            group: item.category 
+        }));
+
+        // --- ADD THESE THREE LINES HERE ---
+        cart = Array(services.length).fill(0); // Now it correctly fills 47 zeros
+        filteredData = [...services]; 
+        transactions[0].cart = Array(services.length).fill(0); // Sync the first tab
+        // ----------------------------------
+
+        console.log("Successfully loaded items:", services);
+        
+        filterServices(); 
+        updateTotals();
+        updateSummary();
+        
+    } catch (err) {
+        console.error("Failed to load inventory:", err);
+    }
+}
 
 const groupColors = {
   "Printing": "#002c8a", // Blue
@@ -69,14 +87,8 @@ const groupColors = {
   "Scan": "#64748b"      // Slate/Gray
 };
 
-let cart = Array(services.length).fill(0);
 let currentPage = 1;
 const itemsPerPage = 9;
-let filteredData = [...services]; // Track filtered results for pagination
-
-function init() {
-  filterServices(); // Initial render through filter logic
-}
 
 function getTransactionLabel(index) {
     let label = "";
@@ -88,24 +100,44 @@ function getTransactionLabel(index) {
 }
 
 function renderTable() {
-  const tbody = document.getElementById("service-rows");
-  tbody.innerHTML = "";
+const tbody = document.getElementById("service-rows");
+    tbody.innerHTML = "";
 
-  // Calculate start and end indices for pagination
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const pageData = filteredData.slice(startIndex, endIndex);
+    // IF DATA IS STILL LOADING
+    if (services.length === 0) {
+        for (let i = 0; i < itemsPerPage; i++) {
+            const skeletonRow = document.createElement("tr");
+            skeletonRow.className = "skeleton-row";
+            skeletonRow.innerHTML = `
+                <td><div class="skeleton-item"></div></td>
+                <td><div class="skeleton-item skeleton-badge"></div></td>
+                <td><div class="skeleton-item skeleton-price"></div></td>
+                <td><div class="skeleton-item skeleton-ctrl"></div></td>
+            `;
+            tbody.appendChild(skeletonRow);
+        }
+        return; // Stop here until loadServicesFromDB finishes
+    }
 
+    // ORIGINAL RENDERING LOGIC (when services are loaded)
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageData = filteredData.slice(startIndex, endIndex);
+    
 pageData.forEach((s) => {
     const originalIndex = services.indexOf(s);
-    // Get the color for the group, default to gray if not found
     const badgeColor = groupColors[s.group] || "#64748b";
 
     const row = document.createElement("tr");
-    if (cart[originalIndex] > 0) row.className = "active-row";
+    
+    // Add a checkbox column if in delete mode
+    let deleteCell = isDeleteMode 
+        ? `<td><input type="checkbox" onchange="toggleItemSelection('${s.id}')" ${itemsToDelete.has(s.id) ? 'checked' : ''}></td>` 
+        : "";
 
     row.innerHTML = `
-    <td><strong>${s.name}</strong></td>
+        ${deleteCell}
+        <td><strong>${s.name}</strong></td>
     <td>
         <span class="badge" style="background-color: ${badgeColor}; color: white; padding: 4px 8px; border-radius: 6px; font-size: 1rem; font-weight: 700;">
             ${s.group}
@@ -123,7 +155,7 @@ pageData.forEach((s) => {
             <button class="btn-ctrl btn-plus" onclick="changeQty(${originalIndex}, 1)">+</button>
         </div>
     </td>
-`;
+    `;
     tbody.appendChild(row);
 });
 
@@ -380,6 +412,32 @@ function filterServices() {
     renderTable();
 }
 
+async function addNewItem() {
+    const password = document.getElementById('adminPass').value;
+    const item = {
+        name: document.getElementById('newItemName').value,
+        price: document.getElementById('newItemPrice').value,
+        category: document.getElementById('newItemCategory').value
+    };
+
+    const response = await fetch('/api/manage', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-admin-password': password // The Secret Key check
+        },
+        body: JSON.stringify(item)
+    });
+
+    const result = await response.json();
+    if (response.ok) {
+        alert("Success! Item added to DS Prints.");
+        loadServicesFromDB(); // Refresh the list automatically
+    } else {
+        alert("Error: " + result.error);
+    }
+}
+
 function copySummary() {
   const items = [];
   const groups = {};
@@ -426,8 +484,8 @@ function copySummary() {
 }
 
 function init() {
-  filterServices();
-  updateSummary();
+    renderTable(); // Show skeletons immediately
+    loadServicesFromDB(); // Start the background fetch
 }
 
 init();
