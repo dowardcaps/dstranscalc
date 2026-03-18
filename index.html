@@ -34,22 +34,19 @@
         />
       </div>
 <div class="admin-controls-wrapper">
-    <button id="btn-manage-toggle" class="btn-admin-main" onclick="unlockAdmin()">
-        🔒 Manage Services / Item
-    </button>
-    <div id="admin-secondary-actions" style="display: none;">
+    <div id="admin-secondary-actions">
         <button id="btn-delete-mode" class="btn-secondary" onclick="toggleDeleteMode()">
             🗑️ Select Items to Delete
         </button>
-        <button id="btn-confirm-delete" class="btn-danger" onclick="deleteSelected()" style="display: none;">
+        <button id="btn-confirm-delete" class="btn-danger" onclick="deleteSelected()">
             ⚠️ Confirm Permanent Delete
         </button>
     </div>
 </div>
 
-<div id="admin-panel" class="admin-panel-card" style="display: none;">
+<div id="admin-panel" class="admin-panel-card">
     <div class="panel-header">
-        <h3>✨ Add New Service</h3>
+        <h3>✨ Add New Service / Item</h3>
         <p>Fill in the details below to expand your shop's offerings.</p>
     </div>
     

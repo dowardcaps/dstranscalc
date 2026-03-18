@@ -1,50 +1,9 @@
-// Use 'let' so these can be updated when the database responds
 let services = [];
-let cart = [];
-let filteredData = [];
-let activeTabIndex = 0;
-
-// Initialize transactions with 'let'
-let transactions = [
-    { 
-        id: Date.now(), 
-        name: "Transaction A", 
-        cart: [], 
-        searchTerm: "", 
-        currentPage: 1 
-    }
-];
-
-async function unlockAdmin() {
-    const pass = prompt("Enter Admin Password:");
-    if (!pass) return;
-
-    try {
-        // Check the password against the new auth API
-        const response = await fetch('/api/auth', {
-            method: 'GET',
-            headers: { 'x-admin-password': pass }
-        });
-
-        if (response.ok) {
-            // SUCCESS: Only show the UI if the server says OK
-            adminPassword = pass;
-            document.getElementById('admin-panel').style.display = 'block';
-            document.getElementById('btn-delete-mode').style.display = 'inline-block';
-            document.getElementById('btn-manage-toggle').innerText = "Lock Admin";
-            
-            // Change button to a simple page reload to lock up
-            document.getElementById('btn-manage-toggle').onclick = () => location.reload();
-            console.log("Admin access granted.");
-        } else {
-            // FAILURE: Keep the UI hidden
-            alert("Access Denied: Incorrect Password.");
-        }
-    } catch (err) {
-        console.error("Auth error:", err);
-        alert("System error. Check if 'vercel dev' is running.");
-    }
-}
+let cart = []; // Start empty
+let filteredData = []; // Start empty
+let adminPassword = ""; // Stores password for the session
+let isDeleteMode = false;
+let itemsToDelete = new Set(); // Stores IDs of checked items
 
 function toggleDeleteMode() {
     isDeleteMode = !isDeleteMode;
@@ -62,42 +21,29 @@ async function loadServicesFromDB() {
     console.log("Connecting to DS Prints Database...");
     try {
         const response = await fetch('/api/items');
-        
-        // If the server crashes (500 error), stop here and show the error
-        if (!response.ok) {
-            const errorBody = await response.text(); 
-            console.error("SERVER ERROR DETAILS:", errorBody);
-            throw new Error(`Server responded with status ${response.status}`);
-        }
-
         const data = await response.json();
 
-        // Update global variables (Now 'let', so this won't crash)
         services = data.map(item => ({
             id: item.id,
             name: item.name,
-            price: parseFloat(item.price) || 0, 
+            price: parseFloat(item.price), 
             group: item.category 
         }));
 
-        cart = Array(services.length).fill(0);
+        // --- ADD THESE THREE LINES HERE ---
+        cart = Array(services.length).fill(0); // Now it correctly fills 47 zeros
         filteredData = [...services]; 
-        
-        if (transactions[activeTabIndex]) {
-            transactions[activeTabIndex].cart = [...cart];
-        }
+        transactions[0].cart = Array(services.length).fill(0); // Sync the first tab
+        // ----------------------------------
 
-        console.log("Successfully loaded items:", services.length);
+        console.log("Successfully loaded items:", services);
         
         filterServices(); 
         updateTotals();
         updateSummary();
         
     } catch (err) {
-        console.error("STOPPED CRASH: Failed to load inventory:", err.message);
-        // This prevents the "Undefined" UI errors seen in your screenshot
-        services = []; 
-        renderTable(); 
+        console.error("Failed to load inventory:", err);
     }
 }
 
@@ -123,11 +69,12 @@ function getTransactionLabel(index) {
 }
 
 function renderTable() {
-const tbody = document.getElementById("service-rows");
+    const tbody = document.getElementById("service-rows");
     tbody.innerHTML = "";
 
-    // IF DATA IS STILL LOADING
+  // IF DATA IS STILL LOADING
     if (services.length === 0) {
+
         for (let i = 0; i < itemsPerPage; i++) {
             const skeletonRow = document.createElement("tr");
             skeletonRow.className = "skeleton-row";
@@ -137,11 +84,12 @@ const tbody = document.getElementById("service-rows");
                 <td><div class="skeleton-item skeleton-price"></div></td>
                 <td><div class="skeleton-item skeleton-ctrl"></div></td>
             `;
+
             tbody.appendChild(skeletonRow);
         }
         return; // Stop here until loadServicesFromDB finishes
-    }
 
+    }
     // ORIGINAL RENDERING LOGIC (when services are loaded)
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -325,6 +273,23 @@ function resetAll() {
     // filterServices() already calls it.
   }
 }
+
+// Add this near your other state variables
+let transactionCounter = 0; 
+
+// Update your initial state
+let transactions = [
+    { 
+        id: Date.now(), 
+        name: "Transaction A", 
+        cart: Array(services.length).fill(0), 
+        searchTerm: "", 
+        currentPage: 1 
+    }
+];
+// We start at 0 (A), so the next one created should be 1 (B)
+transactionCounter = 1;
+let activeTabIndex = 0;
 
 function addNewTransaction() {
     const newId = Date.now();
