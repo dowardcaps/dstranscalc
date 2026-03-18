@@ -1,14 +1,15 @@
+// Use 'let' so these can be updated when the database responds
 let services = [];
 let cart = [];
 let filteredData = [];
-let transactionCounter = 1; // Start counter at 1 (for 'B')
 let activeTabIndex = 0;
-// Initialize the first transaction properly
+
+// Initialize transactions with 'let'
 let transactions = [
     { 
         id: Date.now(), 
         name: "Transaction A", 
-        cart: [], // Leave empty, we will fill it after loading services
+        cart: [], 
         searchTerm: "", 
         currentPage: 1 
     }
@@ -62,15 +63,16 @@ async function loadServicesFromDB() {
     try {
         const response = await fetch('/api/items');
         
-        // If Vercel sends a 500 error (HTML), this catch will trigger
+        // If the server crashes (500 error), stop here and show the error
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Server Error: ${response.status}`);
+            const errorBody = await response.text(); 
+            console.error("SERVER ERROR DETAILS:", errorBody);
+            throw new Error(`Server responded with status ${response.status}`);
         }
 
         const data = await response.json();
 
-        // 1. Map the data to your frontend format
+        // Update global variables (Now 'let', so this won't crash)
         services = data.map(item => ({
             id: item.id,
             name: item.name,
@@ -78,26 +80,24 @@ async function loadServicesFromDB() {
             group: item.category 
         }));
 
-        // 2. Initialize the arrays now that we know the length (47 items)
         cart = Array(services.length).fill(0);
         filteredData = [...services]; 
         
-        // 3. Sync the current transaction tab
         if (transactions[activeTabIndex]) {
             transactions[activeTabIndex].cart = [...cart];
         }
 
         console.log("Successfully loaded items:", services.length);
         
-        // 4. Refresh the UI
         filterServices(); 
         updateTotals();
         updateSummary();
         
     } catch (err) {
-        console.error("Failed to load inventory:", err);
-        // Alert the user so they know why the screen is stuck on skeletons
-        // alert("Database connection failed. Please check Vercel Environment Variables.");
+        console.error("STOPPED CRASH: Failed to load inventory:", err.message);
+        // This prevents the "Undefined" UI errors seen in your screenshot
+        services = []; 
+        renderTable(); 
     }
 }
 
