@@ -417,28 +417,54 @@ function filterServices() {
 }
 
 async function addNewItem() {
-    const password = document.getElementById('adminPass').value;
+    // 1. Check if we have the password from the unlockAdmin phase
+    if (!adminPassword) {
+        alert("Session expired or unauthorized. Please unlock Admin mode again.");
+        return;
+    }
+
+    const name = document.getElementById('newItemName').value;
+    const price = document.getElementById('newItemPrice').value;
+    const category = document.getElementById('newItemCategory').value;
+
+    // Validation check
+    if (!name || !price) {
+        alert("Please enter both a name and a price.");
+        return;
+    }
+
     const item = {
-        name: document.getElementById('newItemName').value,
-        price: document.getElementById('newItemPrice').value,
-        category: document.getElementById('newItemCategory').value
+        name: name,
+        price: price,
+        category: category
     };
 
-    const response = await fetch('/api/manage', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-admin-password': password // The Secret Key check
-        },
-        body: JSON.stringify(item)
-    });
+    try {
+        const response = await fetch('/api/manage', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-password': adminPassword // Use the global variable here
+            },
+            body: JSON.stringify(item)
+        });
 
-    const result = await response.json();
-    if (response.ok) {
-        alert("Success! Item added to DS Prints.");
-        loadServicesFromDB(); // Refresh the list automatically
-    } else {
-        alert("Error: " + result.error);
+        const result = await response.json();
+
+        if (response.ok) {
+            alert("Success! Item added to DS Prints.");
+            // Clear the inputs for the next item
+            document.getElementById('newItemName').value = "";
+            document.getElementById('newItemPrice').value = "";
+            
+            // Refresh the list from the database
+            loadServicesFromDB(); 
+        } else {
+            alert("Error: " + (result.error || "Could not add item"));
+        }
+    } catch (err) {
+        console.error("Add item error:", err);
+        alert("Connection lost. Check your internet or Vercel logs.");
     }
 }
 
