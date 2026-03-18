@@ -6,7 +6,7 @@ export default async function handler(request, response) {
   try {
     if (request.method === 'GET') {
       // Use 'category' to match your new table schema
-      const { rows } = await client.sql`SELECT * FROM services ORDER BY category ASC, name ASC;`;
+      let { rows } = await client.sql`SELECT * FROM services ORDER BY category ASC, name ASC;`;
       return response.status(200).json(rows);
     }
   } catch (error) {
