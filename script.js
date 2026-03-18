@@ -59,9 +59,9 @@ function toggleDeleteMode() {
 
 async function loadServicesFromDB() {
     try {
-        const response = await fetch('/api/items');
+        let response = await fetch('/api/items');
         if (!response.ok) throw new Error('Network response was not ok');
-        const data = await response.json();
+        let data = await response.json();
 
         services = data.map(item => ({
             id: item.id,
