@@ -34,19 +34,22 @@
         />
       </div>
 <div class="admin-controls-wrapper">
-    <div id="admin-secondary-actions">
+    <button id="btn-manage-toggle" class="btn-admin-main" onclick="unlockAdmin()">
+        🔒 Manage Inventory
+    </button>
+    <div id="admin-secondary-actions" style="display: none;">
         <button id="btn-delete-mode" class="btn-secondary" onclick="toggleDeleteMode()">
             🗑️ Select Items to Delete
         </button>
-        <button id="btn-confirm-delete" class="btn-danger" onclick="deleteSelected()">
+        <button id="btn-confirm-delete" class="btn-danger" onclick="deleteSelected()" style="display: none;">
             ⚠️ Confirm Permanent Delete
         </button>
     </div>
 </div>
 
-<div id="admin-panel" class="admin-panel-card">
+<div id="admin-panel" class="admin-panel-card" style="display: none;">
     <div class="panel-header">
-        <h3>✨ Add New Service / Item</h3>
+        <h3>✨ Add New Service</h3>
         <p>Fill in the details below to expand your shop's offerings.</p>
     </div>
     
@@ -71,7 +74,7 @@
                 <option value="Stationery">Stationery</option>
             </select>
         </div>
-        <button class="btn-save" onclick="addNewItem()">+ Add</button>
+        <button class="btn-save" onclick="addNewItem()">➕ Add to Inventory</button>
     </div>
 </div>
       <div class="table-summary_wrapper">

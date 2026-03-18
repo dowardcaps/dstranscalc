@@ -5,6 +5,39 @@ let adminPassword = ""; // Stores password for the session
 let isDeleteMode = false;
 let itemsToDelete = new Set(); // Stores IDs of checked items
 
+async function unlockAdmin() {
+    // If already unlocked, this acts as a lock button
+    if (adminPassword) {
+        location.reload(); 
+        return;
+    }
+
+    const pass = prompt("Enter Admin Password:");
+    if (!pass) return;
+
+    try {
+        const response = await fetch('/api/auth', {
+            method: 'GET',
+            headers: { 'x-admin-password': pass }
+        });
+
+        if (response.ok) {
+            adminPassword = pass;
+            // Show the panel and secondary buttons
+            document.getElementById('admin-panel').style.display = 'block';
+            document.getElementById('admin-secondary-actions').style.display = 'flex';
+            
+            const mainBtn = document.getElementById('btn-manage-toggle');
+            mainBtn.innerText = "🔓 Lock Admin Session";
+            mainBtn.style.background = "#64748b";
+        } else {
+            alert("Access Denied: Incorrect Password.");
+        }
+    } catch (err) {
+        alert("Connection Error. Try again.");
+    }
+}
+
 function toggleDeleteMode() {
     isDeleteMode = !isDeleteMode;
     const btn = document.getElementById('btn-delete-mode');
