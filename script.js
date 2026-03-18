@@ -58,32 +58,46 @@ function toggleDeleteMode() {
 }
 
 async function loadServicesFromDB() {
+    console.log("Connecting to DS Prints Database...");
     try {
-        let response = await fetch('/api/items');
-        if (!response.ok) throw new Error('Network response was not ok');
-        let data = await response.json();
+        const response = await fetch('/api/items');
+        
+        // If Vercel sends a 500 error (HTML), this catch will trigger
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Server Error: ${response.status}`);
+        }
 
+        const data = await response.json();
+
+        // 1. Map the data to your frontend format
         services = data.map(item => ({
             id: item.id,
             name: item.name,
-            price: parseFloat(item.price), 
+            price: parseFloat(item.price) || 0, 
             group: item.category 
         }));
 
-        // Use 'let' or 'var' logic, but ensure transactions exists
+        // 2. Initialize the arrays now that we know the length (47 items)
         cart = Array(services.length).fill(0);
         filteredData = [...services]; 
         
-        // Fix line 69 error: Ensure transactions[0] is updated
-        if (transactions[0]) {
-            transactions[0].cart = Array(services.length).fill(0);
+        // 3. Sync the current transaction tab
+        if (transactions[activeTabIndex]) {
+            transactions[activeTabIndex].cart = [...cart];
         }
 
+        console.log("Successfully loaded items:", services.length);
+        
+        // 4. Refresh the UI
         filterServices(); 
         updateTotals();
         updateSummary();
+        
     } catch (err) {
         console.error("Failed to load inventory:", err);
+        // Alert the user so they know why the screen is stuck on skeletons
+        // alert("Database connection failed. Please check Vercel Environment Variables.");
     }
 }
 
