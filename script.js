@@ -1,9 +1,18 @@
 let services = [];
-let cart = []; // Start empty
-let filteredData = []; // Start empty
-let adminPassword = ""; // Stores password for the session
-let isDeleteMode = false;
-let itemsToDelete = new Set(); // Stores IDs of checked items
+let cart = [];
+let filteredData = [];
+let transactionCounter = 1; // Start counter at 1 (for 'B')
+let activeTabIndex = 0;
+// Initialize the first transaction properly
+let transactions = [
+    { 
+        id: Date.now(), 
+        name: "Transaction A", 
+        cart: [], // Leave empty, we will fill it after loading services
+        searchTerm: "", 
+        currentPage: 1 
+    }
+];
 
 async function unlockAdmin() {
     const pass = prompt("Enter Admin Password:");
@@ -49,9 +58,9 @@ function toggleDeleteMode() {
 }
 
 async function loadServicesFromDB() {
-    console.log("Connecting to DS Prints Database...");
     try {
         const response = await fetch('/api/items');
+        if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
 
         services = data.map(item => ({
@@ -61,18 +70,18 @@ async function loadServicesFromDB() {
             group: item.category 
         }));
 
-        // --- ADD THESE THREE LINES HERE ---
-        cart = Array(services.length).fill(0); // Now it correctly fills 47 zeros
+        // Use 'let' or 'var' logic, but ensure transactions exists
+        cart = Array(services.length).fill(0);
         filteredData = [...services]; 
-        transactions[0].cart = Array(services.length).fill(0); // Sync the first tab
-        // ----------------------------------
-
-        console.log("Successfully loaded items:", services);
         
+        // Fix line 69 error: Ensure transactions[0] is updated
+        if (transactions[0]) {
+            transactions[0].cart = Array(services.length).fill(0);
+        }
+
         filterServices(); 
         updateTotals();
         updateSummary();
-        
     } catch (err) {
         console.error("Failed to load inventory:", err);
     }
@@ -302,23 +311,6 @@ function resetAll() {
     // filterServices() already calls it.
   }
 }
-
-// Add this near your other state variables
-let transactionCounter = 0; 
-
-// Update your initial state
-let transactions = [
-    { 
-        id: Date.now(), 
-        name: "Transaction A", 
-        cart: Array(services.length).fill(0), 
-        searchTerm: "", 
-        currentPage: 1 
-    }
-];
-// We start at 0 (A), so the next one created should be 1 (B)
-transactionCounter = 1;
-let activeTabIndex = 0;
 
 function addNewTransaction() {
     const newId = Date.now();
