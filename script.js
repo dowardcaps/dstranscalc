@@ -1,204 +1,326 @@
 let services = [];
-let cart = []; // Start empty
-let filteredData = []; // Start empty
-let adminPassword = ""; // Stores password for the session
+let cart = [];
+let filteredData = [];
+let adminPassword = "";
 let isDeleteMode = false;
-let itemsToDelete = new Set(); // Stores IDs of checked items
+let isEditMode = false;
+let itemsToDelete = new Set();
+let transactionCounter = 1;
+let activeTabIndex = 0;
 
-async function unlockAdmin() {
-    // If already unlocked, this acts as a lock button
-    if (adminPassword) {
-        location.reload(); 
-        return;
-    }
-
-    const pass = prompt("Enter Admin Password:");
-    if (!pass) return;
-
-    try {
-        const response = await fetch('/api/auth', {
-            method: 'GET',
-            headers: { 'x-admin-password': pass }
-        });
-
-        if (response.ok) {
-            adminPassword = pass;
-            // Show the panel and secondary buttons
-            document.getElementById('admin-panel').style.display = 'block';
-            document.getElementById('admin-secondary-actions').style.display = 'flex';
-            
-            const mainBtn = document.getElementById('btn-manage-toggle');
-            mainBtn.innerText = "🔓 Lock Admin Session";
-            mainBtn.style.background = "#64748b";
-        } else {
-            alert("Access Denied: Incorrect Password.");
-        }
-    } catch (err) {
-        alert("Connection Error. Try again.");
-    }
-}
-
-function toggleDeleteMode() {
-    isDeleteMode = !isDeleteMode;
-    const btn = document.getElementById('btn-delete-mode');
-    const confirmBtn = document.getElementById('btn-confirm-delete');
-    
-    btn.innerText = isDeleteMode ? "Cancel Selection" : "Select Items to Delete";
-    confirmBtn.style.display = isDeleteMode ? "inline-block" : "none";
-    
-    if (!isDeleteMode) itemsToDelete.clear();
-    renderTable(); // Re-render to show/hide checkboxes
-}
-
-async function loadServicesFromDB() {
-    console.log("Connecting to DS Prints Database...");
-    try {
-        const response = await fetch('/api/items');
-        const data = await response.json();
-
-        services = data.map(item => ({
-            id: item.id,
-            name: item.name,
-            price: parseFloat(item.price), 
-            group: item.category 
-        }));
-
-        // --- ADD THESE THREE LINES HERE ---
-        cart = Array(services.length).fill(0); // Now it correctly fills 47 zeros
-        filteredData = [...services]; 
-        transactions[0].cart = Array(services.length).fill(0); // Sync the first tab
-        // ----------------------------------
-
-        console.log("Successfully loaded items:", services);
-        
-        filterServices(); 
-        updateTotals();
-        updateSummary();
-        
-    } catch (err) {
-        console.error("Failed to load inventory:", err);
-    }
-}
+let transactions = [
+  { id: Date.now(), name: "Transaction A", cart: [], searchTerm: "", currentPage: 1 }
+];
 
 const groupColors = {
-  "Printing": "#002c8a", // Blue
-  "Xerox": "#ff6e6e",    // Red
-  "Rush ID": "#8b5cf6",  // Purple
-  "Photo": "#bd7800",    // Amber/Orange
-  "Laminate": "#10b981", // Emerald/Green
-  "Scan": "#64748b"      // Slate/Gray
+  Printing: "#002c8a", Xerox: "#ff6e6e", "Rush ID": "#8b5cf6",
+  Photo: "#bd7800", Laminate: "#10b981", Scan: "#64748b", Stationery: "#ea580c"
 };
 
 let currentPage = 1;
 const itemsPerPage = 9;
 
-function getTransactionLabel(index) {
-    let label = "";
-    while (index >= 0) {
-        label = String.fromCharCode((index % 26) + 65) + label;
-        index = Math.floor(index / 26) - 1;
-    }
-    return label;
+// --- INITIALIZATION & SESSION ---
+async function init() {
+  renderTable(); 
+  await checkExistingSession(); 
+  await loadServicesFromDB(); 
 }
 
+async function checkExistingSession() {
+  const savedPass = localStorage.getItem("ds_admin_pass");
+  if (savedPass) {
+    try {
+      const response = await fetch("/api/auth", { headers: { "x-admin-password": savedPass } });
+      if (response.ok) { adminPassword = savedPass; showAdminUI(); } 
+      else { localStorage.removeItem("ds_admin_pass"); }
+    } catch (err) { console.error("Session restoration failed."); }
+  }
+}
+
+function showAdminUI() {
+  document.getElementById("admin-panel").style.display = "block";
+  document.getElementById("admin-secondary-actions").style.display = "flex";
+  const mainBtn = document.getElementById("btn-manage-toggle");
+  mainBtn.innerText = "🔓 Lock Admin Session";
+  mainBtn.style.background = "#64748b";
+}
+
+async function unlockAdmin() {
+  if (adminPassword) {
+    localStorage.removeItem("ds_admin_pass");
+    location.reload();
+    return;
+  }
+  const pass = prompt("Enter Admin Password:");
+  if (!pass) return;
+
+  try {
+    const response = await fetch("/api/auth", { headers: { "x-admin-password": pass } });
+    if (response.ok) {
+      adminPassword = pass;
+      localStorage.setItem("ds_admin_pass", pass);
+      showAdminUI();
+    } else { alert("Access Denied."); }
+  } catch (err) { alert("Connection Error."); }
+}
+
+// --- SUCCESS MODAL ---
+function showSuccessModal(message) {
+  const modal = document.getElementById("success-modal");
+  document.getElementById("success-message").innerText = message;
+  modal.style.display = "flex";
+  setTimeout(() => { modal.style.display = "none"; }, 1500);
+}
+
+// --- DATABASE LOAD ---
+async function loadServicesFromDB() {
+  try {
+    const response = await fetch("/api/items");
+    const data = await response.json();
+
+    services = data.map((item) => ({
+      id: item.id, name: item.name, price: parseFloat(item.price), group: item.category,
+    }));
+
+    transactions.forEach((tab) => {
+      if (tab.cart.length !== services.length) {
+        const newCart = Array(services.length).fill(0);
+        tab.cart.forEach((qty, i) => { if (i < newCart.length) newCart[i] = qty; });
+        tab.cart = newCart;
+      }
+    });
+
+    syncGlobalState();
+    filterServices();
+    updateTotals();
+    updateSummary();
+  } catch (err) { console.error("Failed to load inventory:", err); }
+}
+
+// --- MODES: EDIT & DELETE ---
+function toggleDeleteMode() {
+  isDeleteMode = !isDeleteMode;
+  isEditMode = false; // Turn off edit mode
+  document.getElementById("btn-delete-mode").innerText = isDeleteMode ? "Cancel Delete" : "🗑️ Delete Items";
+  document.getElementById("btn-confirm-delete").style.display = isDeleteMode ? "inline-block" : "none";
+  document.getElementById("btn-edit-mode").innerText = "✏️ Edit Items";
+  if (!isDeleteMode) itemsToDelete.clear();
+  renderTable();
+}
+
+function toggleEditMode() {
+  isEditMode = !isEditMode;
+  isDeleteMode = false; // Turn off delete mode
+  document.getElementById("btn-edit-mode").innerText = isEditMode ? "Cancel Edit" : "✏️ Edit Items";
+  document.getElementById("btn-delete-mode").innerText = "🗑️ Delete Items";
+  document.getElementById("btn-confirm-delete").style.display = "none";
+  itemsToDelete.clear();
+  renderTable();
+}
+
+function toggleItemSelection(id) {
+  itemsToDelete.has(id) ? itemsToDelete.delete(id) : itemsToDelete.add(id);
+}
+
+// --- API ACTIONS (ADD, EDIT, DELETE) ---
+async function addNewItem() {
+  if (!adminPassword) return alert("Unauthorized.");
+  const name = document.getElementById("newItemName").value;
+  const price = document.getElementById("newItemPrice").value;
+  const category = document.getElementById("newItemCategory").value;
+  if (!name || !price) return alert("Please enter name and price.");
+
+  const btn = document.getElementById("btn-add-item");
+  btn.disabled = true; // Prevent double clicks
+
+  try {
+    const response = await fetch("/api/manage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": adminPassword },
+      body: JSON.stringify({ name, price, category }),
+    });
+    if (response.ok) {
+      document.getElementById("newItemName").value = "";
+      document.getElementById("newItemPrice").value = "";
+      showSuccessModal("Item Added");
+      await loadServicesFromDB();
+    } else { alert("Error adding item."); }
+  } catch (err) { console.error(err); alert("Connection lost."); }
+  finally { btn.disabled = false; }
+}
+
+async function confirmDeleteItems() {
+  if (itemsToDelete.size === 0) return alert("Select items first.");
+  if (!confirm(`Delete ${itemsToDelete.size} item(s)?`)) return;
+
+  const btn = document.getElementById("btn-confirm-delete");
+  btn.disabled = true;
+
+  try {
+    const response = await fetch("/api/manage", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "x-admin-password": adminPassword },
+      body: JSON.stringify({ ids: Array.from(itemsToDelete) }),
+    });
+
+    if (response.ok) {
+      showSuccessModal("Items Deleted");
+      toggleDeleteMode(); // Auto close delete mode
+      await loadServicesFromDB(); 
+    } else { alert("Delete failed."); }
+  } catch (err) { alert("Server error."); }
+  finally { btn.disabled = false; }
+}
+
+// --- EDIT MODAL LOGIC ---
+function openEditModal(id) {
+  // Convert both to strings to prevent Number vs String mismatch errors
+  const item = services.find(s => String(s.id) === String(id));
+  
+  if (!item) {
+    console.error("Could not find the item in the services array with ID:", id);
+    return;
+  }
+  
+  document.getElementById("editItemId").value = item.id;
+  document.getElementById("editItemName").value = item.name;
+  document.getElementById("editItemPrice").value = item.price;
+  document.getElementById("editItemCategory").value = item.group;
+  
+  // Show the modal
+  document.getElementById("edit-modal").style.display = "flex";
+}
+
+function closeEditModal() {
+  document.getElementById("edit-modal").style.display = "none";
+}
+
+async function saveEditItem() {
+  const id = document.getElementById("editItemId").value;
+  const name = document.getElementById("editItemName").value;
+  const price = document.getElementById("editItemPrice").value;
+  const category = document.getElementById("editItemCategory").value;
+
+  const btn = document.getElementById("btn-save-edit");
+  btn.disabled = true;
+
+  try {
+    const response = await fetch("/api/manage", {
+      method: "PUT", // Or PATCH depending on your backend
+      headers: { "Content-Type": "application/json", "x-admin-password": adminPassword },
+      body: JSON.stringify({ id, name, price, category }),
+    });
+
+    if (response.ok) {
+      showSuccessModal("Item Updated");
+      closeEditModal();
+      await loadServicesFromDB();
+    } else { alert("Failed to update item."); }
+  } catch (err) { alert("Connection error."); }
+  finally { btn.disabled = false; }
+}
+
+// --- RENDERING & UI LOGIC ---
 function renderTable() {
-    const tbody = document.getElementById("service-rows");
-    tbody.innerHTML = "";
+  const tbody = document.getElementById("service-rows");
+  const headerRow = document.getElementById("table-header-row");
+  tbody.innerHTML = "";
 
-  // IF DATA IS STILL LOADING
-    if (services.length === 0) {
+  // Dynamic Header logic remains same
+  let actionHeader = "";
+  if (isDeleteMode) actionHeader = "<th>Select</th>";
+  else if (isEditMode) actionHeader = "<th>Edit</th>";
+  
+  headerRow.innerHTML = `
+    ${actionHeader}
+    <th>Service / Item</th>
+    <th>Category</th>
+    <th>Price</th>
+    <th class="text-center">Quantity</th>
+  `;
 
-        for (let i = 0; i < itemsPerPage; i++) {
-            const skeletonRow = document.createElement("tr");
-            skeletonRow.className = "skeleton-row";
-            skeletonRow.innerHTML = `
-                <td><div class="skeleton-item"></div></td>
-                <td><div class="skeleton-item skeleton-badge"></div></td>
-                <td><div class="skeleton-item skeleton-price"></div></td>
-                <td><div class="skeleton-item skeleton-ctrl"></div></td>
-            `;
-
-            tbody.appendChild(skeletonRow);
-        }
-        return; // Stop here until loadServicesFromDB finishes
-
+  // --- SKELETON UI STATE ---
+  if (services.length === 0) {
+    for (let i = 0; i < itemsPerPage; i++) {
+      const sRow = document.createElement("tr");
+      sRow.innerHTML = `
+        ${actionHeader ? '<td><div class="skeleton-box" style="width:20px"></div></td>' : ''}
+        <td><div class="skeleton-box"></div></td>
+        <td><div class="skeleton-box" style="width:70%"></div></td>
+        <td><div class="skeleton-box" style="width:50%"></div></td>
+        <td><div class="skeleton-box" style="width:80px; margin: 0 auto;"></div></td>
+      `;
+      tbody.appendChild(sRow);
     }
-    // ORIGINAL RENDERING LOGIC (when services are loaded)
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const pageData = filteredData.slice(startIndex, endIndex);
-    
-pageData.forEach((s) => {
+    return; // Exit early while loading
+  }
+
+  // --- NORMAL RENDERING ---
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const pageData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+
+  pageData.forEach((s) => {
     const originalIndex = services.indexOf(s);
     const badgeColor = groupColors[s.group] || "#64748b";
-
     const row = document.createElement("tr");
-    
-    // Add a checkbox column if in delete mode
-    let deleteCell = isDeleteMode 
-        ? `<td><input type="checkbox" onchange="toggleItemSelection('${s.id}')" ${itemsToDelete.has(s.id) ? 'checked' : ''}></td>` 
-        : "";
+
+    let actionCell = "";
+    if (isDeleteMode) {
+      actionCell = `<td><input type="checkbox" onchange="toggleItemSelection('${s.id}')" ${itemsToDelete.has(s.id) ? "checked" : ""}></td>`;
+    } else if (isEditMode) {
+      actionCell = `<td><button class="btn-edit-small" onclick="openEditModal('${s.id}')">✏️</button></td>`;
+    }
 
     row.innerHTML = `
-        ${deleteCell}
-        <td><strong>${s.name}</strong></td>
-    <td>
-        <span class="badge" style="background-color: ${badgeColor}; color: white; padding: 4px 8px; border-radius: 6px; font-size: 1rem; font-weight: 700;">
-            ${s.group}
-        </span>
-    </td>
-    <td class="price-cell">₱${s.price.toFixed(2)}</td>
-    <td>
+      ${actionCell}
+      <td><strong>${s.name}</strong></td>
+      <td><span style="background-color: ${badgeColor}; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 700;">${s.group}</span></td>
+      <td>₱${s.price.toFixed(2)}</td>
+      <td>
         <div class="controls">
-            <button class="btn-ctrl btn-minus" onclick="changeQty(${originalIndex}, -1)" ${cart[originalIndex] === 0 ? "disabled" : ""}>-</button>
-            <input type="number" 
-                   class="qty-input" 
-                   value="${cart[originalIndex]}" 
-                   min="0" 
-                   onchange="updateQtyInput(${originalIndex}, this.value)">
-            <button class="btn-ctrl btn-plus" onclick="changeQty(${originalIndex}, 1)">+</button>
+          <button class="btn-ctrl btn-minus" onclick="changeQty(${originalIndex}, -1)" ${cart[originalIndex] === 0 ? "disabled" : ""}>-</button>
+          <input type="number" class="qty-input" value="${cart[originalIndex]}" onchange="updateQtyInput(${originalIndex}, this.value)">
+          <button class="btn-ctrl btn-plus" onclick="changeQty(${originalIndex}, 1)">+</button>
         </div>
-    </td>
+      </td>
     `;
     tbody.appendChild(row);
-});
-
+  });
+  
   updatePaginationUI();
 }
 
 function updateQtyInput(index, value) {
-    const newQty = parseInt(value);
-    
-    // Validate input: if it's not a number or empty, set to 0
-    if (isNaN(newQty) || newQty < 0) {
-        cart[index] = 0;
-    } else {
-        cart[index] = newQty;
-    }
-    
-    updateTotals();
-    updateSummary();
-    renderTable(); // Refresh to update button disabled states
+  const newQty = parseInt(value);
+  cart[index] = (isNaN(newQty) || newQty < 0) ? 0 : newQty;
+  updateTotals();
+  updateSummary();
+  renderTable();
 }
 
-function filterServices() {
-  const searchTerm = document
-    .getElementById("serviceSearch")
-    .value.toLowerCase();
-  filteredData = services.filter(
-    (s) =>
-      s.name.toLowerCase().includes(searchTerm) ||
-      s.group.toLowerCase().includes(searchTerm),
-  );
+function changeQty(index, delta) {
+  cart[index] = Math.max(0, cart[index] + delta);
+  updateTotals();
+  updateSummary();
+  renderTable();
+}
 
-  currentPage = 1; // Reset to page 1 on search
+// --- SEARCH, PAGINATION & TABS ---
+function filterServices() {
+  const searchInput = document.getElementById("serviceSearch");
+  const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
+  transactions[activeTabIndex].searchTerm = searchTerm;
+
+  filteredData = services.filter((s) => s.name.toLowerCase().includes(searchTerm) || s.group.toLowerCase().includes(searchTerm));
+  transactions[activeTabIndex].currentPage = 1;
+  currentPage = 1;
   renderTable();
 }
 
 function changePage(direction) {
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const nextStep = currentPage + direction;
-
   if (nextStep >= 1 && nextStep <= totalPages) {
     currentPage = nextStep;
     renderTable();
@@ -207,315 +329,128 @@ function changePage(direction) {
 
 function updatePaginationUI() {
   const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
-  document.getElementById("pageInfo").innerText =
-    `${currentPage} of ${totalPages}`;
-
+  document.getElementById("pageInfo").innerText = `${currentPage} of ${totalPages}`;
   document.getElementById("prevPage").disabled = currentPage === 1;
   document.getElementById("nextPage").disabled = currentPage === totalPages;
 }
 
-// Ensure changeQty calls renderTable to refresh the current page view
-function changeQty(index, delta) {
-  cart[index] = Math.max(0, cart[index] + delta);
-  updateTotals();
-  renderTable();
+function getTransactionLabel(index) {
+  let label = "";
+  while (index >= 0) {
+    label = String.fromCharCode((index % 26) + 65) + label;
+    index = Math.floor(index / 26) - 1;
+  }
+  return label;
 }
 
-function updateTotals() {
-  let grandTotal = 0;
-  let totalItems = 0;
-  services.forEach((s, i) => {
-    grandTotal += s.price * cart[i];
-    totalItems += cart[i];
+function addNewTransaction() {
+  transactions.push({
+    id: Date.now(),
+    name: `Transaction ${getTransactionLabel(transactionCounter++)}`,
+    cart: Array(services.length).fill(0),
+    searchTerm: "", currentPage: 1,
   });
-  document.getElementById("grand-total").innerText =
-    `₱${grandTotal.toFixed(2)}`;
+  activeTabIndex = transactions.length - 1;
+  switchTab(activeTabIndex);
+}
+
+function switchTab(index) {
+  activeTabIndex = index;
+  syncGlobalState();
+  renderTabs();
+  document.getElementById("serviceSearch").value = transactions[activeTabIndex].searchTerm;
+  filterServices();
+  updateTotals();
+  updateSummary();
+}
+
+function syncGlobalState() {
+  cart = transactions[activeTabIndex].cart;
+  currentPage = transactions[activeTabIndex].currentPage;
+}
+
+function renderTabs() {
+  const tabsList = document.getElementById("tabs-list");
+  tabsList.innerHTML = "";
+  transactions.forEach((tab, index) => {
+    const tabEl = document.createElement("button");
+    tabEl.className = `tab-item ${index === activeTabIndex ? "active" : ""}`;
+    tabEl.innerHTML = `${tab.name} ${transactions.length > 1 ? `<span class="close-tab" onclick="removeTab(event, ${index})">×</span>` : ""}`;
+    tabEl.onclick = () => switchTab(index);
+    tabsList.appendChild(tabEl);
+  });
+}
+
+function removeTab(event, index) {
+  event.stopPropagation();
+  if (transactions.length <= 1) return;
+  transactions.splice(index, 1);
+  if (activeTabIndex >= transactions.length) activeTabIndex = transactions.length - 1;
+  switchTab(activeTabIndex);
+}
+
+// --- SUMMARY & UTILS ---
+function updateTotals() {
+  let grandTotal = 0, totalItems = 0;
+  services.forEach((s, i) => { grandTotal += s.price * cart[i]; totalItems += cart[i]; });
+  document.getElementById("grand-total").innerText = `₱${grandTotal.toFixed(2)}`;
   document.getElementById("item-count").innerText = `${totalItems} items`;
 }
 
 function updateSummary() {
-  const summaryContainer = document.getElementById("order-summary-container");
   const summaryItems = document.getElementById("summary-items");
   summaryItems.innerHTML = "";
-
-  let detailsText = "";
-  let hasItems = false;
+  let detailsText = "", hasItems = false;
   const groups = {};
 
-  // Grouping logic to match your image layout
   services.forEach((s, index) => {
     if (cart[index] > 0) {
       hasItems = true;
       if (!groups[s.group]) groups[s.group] = [];
-      // Example output: Letter (B&W) - 3 - ₱15
       groups[s.group].push(`${s.name} - ${cart[index]} x ₱${s.price} = ₱${s.price * cart[index]}`);
     }
   });
 
-  // Always ensure the container is visible
-  summaryContainer.style.display = "block";
-
-if (hasItems) {
+  if (hasItems) {
     for (const group in groups) {
-      const headerColor = groupColors[group] || "#000";
-      // Adding color to the group name in the summary table
-      detailsText += `<strong style="color: ${headerColor}">${group}</strong>\n`;
-      detailsText += groups[group].join(",\n") + "\n\n";
+      detailsText += `<strong style="color: ${groupColors[group] || '#000'}">${group}</strong>\n${groups[group].join("\n")}\n\n`;
     }
-
-    const row = document.createElement("tr");
-    row.innerHTML = `<td class="details-content">${detailsText}</td>`;
-    summaryItems.appendChild(row);
-} else {
-    // Show a placeholder or empty row so the table doesn't look broken
-    const row = document.createElement("tr");
-    row.innerHTML = `<td class="details-content" style="color: #94a3b8; font-style: italic;">No items added yet...</td>`;
-    summaryItems.appendChild(row);
+    summaryItems.innerHTML = `<tr><td class="details-content">${detailsText}</td></tr>`;
+  } else {
+    summaryItems.innerHTML = `<tr><td class="details-content" style="color: #94a3b8; font-style: italic;">No items added yet...</td></tr>`;
   }
-}
-
-// IMPORTANT: Ensure changeQty calls the update
-function changeQty(index, delta) {
-  cart[index] = Math.max(0, cart[index] + delta);
-  updateTotals();
-  updateSummary(); // This MUST be here to show the summary
-  renderTable();
 }
 
 function resetAll() {
   if (confirm("Clear current order?")) {
-    // 1. Reset the cart quantities
     cart = Array(services.length).fill(0);
-    
-    // 2. Clear the search input field
-    const searchInput = document.getElementById("serviceSearch");
-    if (searchInput) {
-      searchInput.value = "";
-    }
-    
-    // 3. Reset the filter and data view
-    // Calling filterServices() while the search input is empty 
-    // will set filteredData back to the full services list.
-    filterServices(); 
-    
-    // 4. Update the UI components
+    document.getElementById("serviceSearch").value = "";
+    filterServices();
     updateTotals();
     updateSummary();
-    
-    // No need to call renderTable() separately because 
-    // filterServices() already calls it.
   }
 }
 
-// Add this near your other state variables
-let transactionCounter = 0; 
-
-// Update your initial state
-let transactions = [
-    { 
-        id: Date.now(), 
-        name: "Transaction A", 
-        cart: Array(services.length).fill(0), 
-        searchTerm: "", 
-        currentPage: 1 
-    }
-];
-// We start at 0 (A), so the next one created should be 1 (B)
-transactionCounter = 1;
-let activeTabIndex = 0;
-
-function addNewTransaction() {
-    const newId = Date.now();
-    // Get the letter based on the counter, not the array length
-    const letterLabel = getTransactionLabel(transactionCounter);
-
-    transactions.push({
-        id: newId,
-        name: `Transaction ${letterLabel}`,
-        cart: Array(services.length).fill(0),
-        searchTerm: "",
-        currentPage: 1
-    });
-    
-    // Increment so the next one is always the next letter in the alphabet
-    transactionCounter++; 
-    
-    activeTabIndex = transactions.length - 1;
-    renderTabs();
-    syncGlobalState();
-    filterServices();
-    updateSummary();
-    updateTotals();
-}
-
-function switchTab(index) {
-    activeTabIndex = index;
-    
-    // 1. Sync the data
-    syncGlobalState();
-    
-    // 2. Update UI Elements
-    renderTabs();
-    document.getElementById("serviceSearch").value = transactions[activeTabIndex].searchTerm;
-    
-    // 3. Refresh the View
-    filterServices(); // This handles renderTable()
-    updateTotals();   // Recalculates the ₱ amount for THIS customer
-    updateSummary();  // Rebuilds the text summary for THIS customer
-}
-
-function syncGlobalState() {
-    // This connects your existing logic to the data of the currently selected tab
-    cart = transactions[activeTabIndex].cart;
-    currentPage = transactions[activeTabIndex].currentPage;
-}
-
-function renderTabs() {
-    const tabsList = document.getElementById("tabs-list");
-    tabsList.innerHTML = "";
-    transactions.forEach((tab, index) => {
-        const tabEl = document.createElement("button");
-        tabEl.className = `tab-item ${index === activeTabIndex ? 'active' : ''}`;
-        tabEl.innerHTML = `
-            ${tab.name}
-            ${transactions.length > 1 ? `<span class="close-tab" onclick="removeTab(event, ${index})">×</span>` : ''}
-        `;
-        tabEl.onclick = () => switchTab(index);
-        tabsList.appendChild(tabEl);
-    });
-}
-
-function removeTab(event, index) {
-    event.stopPropagation(); // Prevent switching to the tab we are closing
-    if (transactions.length <= 1) return;
-    
-    transactions.splice(index, 1);
-    if (activeTabIndex >= transactions.length) {
-        activeTabIndex = transactions.length - 1;
-    }
-    renderTabs();
-    switchTab(activeTabIndex);
-}
-
-// Update your filterServices to save the search term to the tab
-function filterServices() {
-    const searchInput = document.getElementById("serviceSearch");
-    const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
-    
-    // Save search to current transaction
-    transactions[activeTabIndex].searchTerm = searchTerm;
-
-    filteredData = services.filter(
-        (s) =>
-            s.name.toLowerCase().includes(searchTerm) ||
-            s.group.toLowerCase().includes(searchTerm),
-    );
-
-    transactions[activeTabIndex].currentPage = 1;
-    currentPage = 1; 
-    renderTable();
-}
-
-async function addNewItem() {
-    // 1. Check if we have the password from the unlockAdmin phase
-    if (!adminPassword) {
-        alert("Session expired or unauthorized. Please unlock Admin mode again.");
-        return;
-    }
-
-    const name = document.getElementById('newItemName').value;
-    const price = document.getElementById('newItemPrice').value;
-    const category = document.getElementById('newItemCategory').value;
-
-    // Validation check
-    if (!name || !price) {
-        alert("Please enter both a name and a price.");
-        return;
-    }
-
-    const item = {
-        name: name,
-        price: price,
-        category: category
-    };
-
-    try {
-        const response = await fetch('/api/manage', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-password': adminPassword // Use the global variable here
-            },
-            body: JSON.stringify(item)
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-            alert("Success! Item added to DS Prints.");
-            // Clear the inputs for the next item
-            document.getElementById('newItemName').value = "";
-            document.getElementById('newItemPrice').value = "";
-            
-            // Refresh the list from the database
-            loadServicesFromDB(); 
-        } else {
-            alert("Error: " + (result.error || "Could not add item"));
-        }
-    } catch (err) {
-        console.error("Add item error:", err);
-        alert("Connection lost. Check your internet or Vercel logs.");
-    }
-}
-
 function copySummary() {
-  const items = [];
   const groups = {};
-  let grandTotal = 0;
-
-  // 1. Collect only items with quantity > 0
   services.forEach((s, index) => {
     if (cart[index] > 0) {
       if (!groups[s.group]) groups[s.group] = [];
       groups[s.group].push(`${s.name} - ${cart[index]} x ₱${s.price} = ₱${s.price * cart[index]}`);
-      grandTotal += s.price * cart[index];
     }
   });
 
-  if (Object.keys(groups).length === 0) {
-    alert("Cart is empty!");
-    return;
-  }
+  if (Object.keys(groups).length === 0) return alert("Cart is empty!");
 
-  // 2. Format the text block
   let textToCopy = ``;
-  for (const group in groups) {
-    textToCopy += `[${group}]\n${groups[group].join("\n")}\n`;
-  }
-  textToCopy += ``;
+  for (const group in groups) textToCopy += `[${group}]\n${groups[group].join("\n")}\n\n`;
 
-  // 3. Use the Clipboard API
-  navigator.clipboard
-    .writeText(textToCopy)
-    .then(() => {
-      const btn = document.querySelector(".copy-btn");
-      btn.innerText = "✅ Copied!";
-      btn.style.background = "#22c55e";
-
-      // Reset button after 2 seconds
-      setTimeout(() => {
-        btn.innerText = "Copy";
-        btn.style.background = "#fefeff";
-      }, 2000);
-    })
-    .catch((err) => {
-      console.error("Failed to copy: ", err);
-    });
-}
-
-function init() {
-    renderTable(); // Show skeletons immediately
-    loadServicesFromDB(); // Start the background fetch
+  navigator.clipboard.writeText(textToCopy).then(() => {
+    const btn = document.querySelector(".copy-btn");
+    btn.innerText = "✅ Copied!";
+    btn.style.background = "#22c55e";
+    setTimeout(() => { btn.innerText = "Copy"; btn.style.background = "#fff"; }, 2000);
+  });
 }
 
 init();
