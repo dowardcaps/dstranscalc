@@ -2,45 +2,87 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>DS Prints Transaction Calculator</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="icon" type="image/png" href="icon.png" />
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <div class="tabs-container">
-      <div id="tabs-list" class="tabs-list"></div>
-      <button class="add-tab-btn" onclick="addNewTransaction()">+ New Transaction</button>
-    </div>
-
     <div class="pos-container">
       <header>
         <h1>Transaction Calculator</h1>
-        <button class="reset-btn" onclick="resetAll()">Clear All</button>
       </header>
+      <div class="tabs-container">
+        <div id="tabs-list" class="tabs-list"></div>
+        <button class="add-tab-btn" onclick="addNewTransaction()">
+          + New Transaction
+        </button>
+      </div>
 
       <div class="admin-controls-wrapper">
-        <button id="btn-manage-toggle" class="btn-admin-main" onclick="unlockAdmin()">🔒 Manage Inventory</button>
-        <div id="admin-secondary-actions" style="display: none;">
-          <button id="btn-edit-mode" class="btn-white" onclick="toggleEditMode()">✏️ Edit Items</button>
-          <button id="btn-delete-mode" class="btn-white" onclick="toggleDeleteMode()">🗑️ Delete Items</button>
-          <button id="btn-confirm-delete" class="btn-danger" onclick="confirmDeleteItems()" style="display: none;">Confirm Delete</button>
+        <button
+          id="btn-manage-toggle"
+          class="btn-admin-main"
+          onclick="unlockAdmin()"
+        >
+          🔒 Manage Inventory
+        </button>
+        <div id="admin-secondary-actions" style="display: none">
+          <button
+            id="btn-add-mode"
+            class="btn-white"
+            onclick="toggleAddMode()"
+          >
+            + Add Items
+          </button>
+          <button
+            id="btn-edit-mode"
+            class="btn-white"
+            onclick="toggleEditMode()"
+          >
+            ✏️ Edit Items
+          </button>
+          <button
+            id="btn-delete-mode"
+            class="btn-white"
+            onclick="toggleDeleteMode()"
+          >
+            🗑️ Delete Items
+          </button>
+          <button
+            id="btn-confirm-delete"
+            class="btn-danger"
+            onclick="confirmDeleteItems()"
+            style="display: none"
+          >
+            Confirm Delete
+          </button>
         </div>
       </div>
 
-      <div id="admin-panel" class="admin-panel-card" style="display: none;">
+      <div id="admin-panel" class="admin-panel-card" style="display: none">
         <div class="panel-header">
-          <h3>✨ Add New Service</h3>
+          <h3>✨ Add New Item/Service</h3>
         </div>
         <div class="admin-grid-form">
           <div class="input-group">
-            <label>Service Name</label>
-            <input type="text" id="newItemName" placeholder="e.g., Heavy Glossy Photo">
+            <label>Item/Service Name</label>
+            <input
+              type="text"
+              id="newItemName"
+              placeholder="e.g., Heavy Glossy Photo"
+            />
           </div>
           <div class="input-group">
             <label>Price (₱)</label>
-            <input type="number" id="newItemPrice" placeholder="0.00">
+            <input type="number" id="newItemPrice" placeholder="0.00" />
           </div>
           <div class="input-group">
             <label>Category</label>
@@ -52,14 +94,28 @@
               <option value="Laminate">Laminate</option>
               <option value="Scan">Scan</option>
               <option value="Stationery">Stationery</option>
+              <option value="Other">Other</option>
             </select>
           </div>
-          <button id="btn-add-item" class="btn-save" onclick="addNewItem()">+ Add to Inventory</button>
+          <button id="btn-add-item" class="btn-save" onclick="addNewItem()">
+            Submit
+          </button>
         </div>
       </div>
 
-      <div class="search-container">
-        <input type="text" id="serviceSearch" placeholder="Search services (e.g., 'Xerox', 'Long')..." onkeyup="filterServices()" />
+      <div class="search-reset_wrapper">
+        <div class="search-container">
+          <div class="input-group">
+            <label>Search</label>
+            <input
+              type="text"
+              id="serviceSearch"
+              placeholder="Search services (e.g., 'Xerox', 'Long')..."
+              onkeyup="filterServices()"
+            />
+          </div> 
+      </div>
+       <button class="reset-btn" onclick="resetAll()">Reset</button>
       </div>
 
       <div class="table-summary_wrapper">
@@ -77,9 +133,13 @@
               <tbody id="service-rows"></tbody>
             </table>
             <div class="pagination-container">
-              <button id="prevPage" class="btn-page" onclick="changePage(-1)"><<</button>
+              <button id="prevPage" class="btn-page" onclick="changePage(-1)">
+                <<
+              </button>
               <span id="pageInfo">Page 1 of 1</span>
-              <button id="nextPage" class="btn-page" onclick="changePage(1)">>></button>
+              <button id="nextPage" class="btn-page" onclick="changePage(1)">
+                >>
+              </button>
             </div>
           </div>
         </div>
@@ -103,21 +163,21 @@
       </div>
     </div>
 
-    <div id="edit-modal" class="modal-overlay" style="display: none;">
+    <div id="edit-modal" class="modal-overlay" style="display: none">
       <div class="modal-card">
         <div class="modal-header">
           <h3>Update Service</h3>
           <button class="close-modal" onclick="closeEditModal()">×</button>
         </div>
         <div class="modal-body">
-          <input type="hidden" id="editItemId">
+          <input type="hidden" id="editItemId" />
           <div class="input-group">
             <label>Service Name</label>
-            <input type="text" id="editItemName">
+            <input type="text" id="editItemName" />
           </div>
           <div class="input-group">
             <label>Price (₱)</label>
-            <input type="number" id="editItemPrice">
+            <input type="number" id="editItemPrice" />
           </div>
           <div class="input-group">
             <label>Category</label>
@@ -133,13 +193,21 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn-secondary" onclick="closeEditModal()">Cancel</button>
-          <button id="btn-save-edit" class="btn-save" onclick="saveEditItem()">Save Changes</button>
+          <button class="btn-secondary" onclick="closeEditModal()">
+            Cancel
+          </button>
+          <button id="btn-save-edit" class="btn-save" onclick="saveEditItem()">
+            Save Changes
+          </button>
         </div>
       </div>
     </div>
 
-    <div id="success-modal" class="modal-overlay" style="display: none; z-index: 10000;">
+    <div
+      id="success-modal"
+      class="modal-overlay"
+      style="display: none; z-index: 10000"
+    >
       <div class="modal-card success-card">
         <div class="success-icon">✓</div>
         <h3 id="success-message">Done</h3>

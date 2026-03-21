@@ -2,6 +2,7 @@ let services = [];
 let cart = [];
 let filteredData = [];
 let adminPassword = "";
+let isAddMode = false;
 let isDeleteMode = false;
 let isEditMode = false;
 let itemsToDelete = new Set();
@@ -14,7 +15,7 @@ let transactions = [
 
 const groupColors = {
   Printing: "#002c8a", Xerox: "#ff6e6e", "Rush ID": "#8b5cf6",
-  Photo: "#bd7800", Laminate: "#10b981", Scan: "#64748b", Stationery: "#ea580c"
+  Photo: "#bd7800", Laminate: "#089b6a", Scan: "#004100", Stationery: "#663600"
 };
 
 let currentPage = 1;
@@ -39,7 +40,6 @@ async function checkExistingSession() {
 }
 
 function showAdminUI() {
-  document.getElementById("admin-panel").style.display = "block";
   document.getElementById("admin-secondary-actions").style.display = "flex";
   const mainBtn = document.getElementById("btn-manage-toggle");
   mainBtn.innerText = "🔓 Lock Admin Session";
@@ -102,9 +102,12 @@ async function loadServicesFromDB() {
 function toggleDeleteMode() {
   isDeleteMode = !isDeleteMode;
   isEditMode = false; // Turn off edit mode
+  isAddMode = false; // Turn off add mode
+  document.getElementById("admin-panel").style.display = "none";
   document.getElementById("btn-delete-mode").innerText = isDeleteMode ? "Cancel Delete" : "🗑️ Delete Items";
   document.getElementById("btn-confirm-delete").style.display = isDeleteMode ? "inline-block" : "none";
   document.getElementById("btn-edit-mode").innerText = "✏️ Edit Items";
+  document.getElementById("btn-add-mode").innerText = "+ Add Items";
   if (!isDeleteMode) itemsToDelete.clear();
   renderTable();
 }
@@ -112,8 +115,24 @@ function toggleDeleteMode() {
 function toggleEditMode() {
   isEditMode = !isEditMode;
   isDeleteMode = false; // Turn off delete mode
+  isAddMode = false; // Turn off add mode
+  document.getElementById("admin-panel").style.display = "none";
   document.getElementById("btn-edit-mode").innerText = isEditMode ? "Cancel Edit" : "✏️ Edit Items";
   document.getElementById("btn-delete-mode").innerText = "🗑️ Delete Items";
+  document.getElementById("btn-add-mode").innerText = "+ Add Items";
+  document.getElementById("btn-confirm-delete").style.display = "none";
+  itemsToDelete.clear();
+  renderTable();
+}
+
+function toggleAddMode() {
+  isAddMode = !isAddMode;
+  isDeleteMode = false; // Turn off delete mode
+  isEditMode = false; // Turn off edit mode
+  document.getElementById("admin-panel").style.display = isAddMode ? "block" : "none";
+  document.getElementById("btn-add-mode").innerText = isAddMode ? "Cancel Add" : "+ Add Items";
+  document.getElementById("btn-delete-mode").innerText = "🗑️ Delete Items";
+  document.getElementById("btn-edit-mode").innerText = "✏️ Edit Items";
   document.getElementById("btn-confirm-delete").style.display = "none";
   itemsToDelete.clear();
   renderTable();
@@ -443,7 +462,7 @@ function copySummary() {
   if (Object.keys(groups).length === 0) return alert("Cart is empty!");
 
   let textToCopy = ``;
-  for (const group in groups) textToCopy += `[${group}]\n${groups[group].join("\n")}\n\n`;
+  for (const group in groups) textToCopy += `[${group}]\n${groups[group].join("\n")}\n`;
 
   navigator.clipboard.writeText(textToCopy).then(() => {
     const btn = document.querySelector(".copy-btn");
