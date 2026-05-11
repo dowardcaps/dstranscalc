@@ -174,7 +174,6 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   .summary {
     height: auto;
     min-height: 300px;
-    position: sticky;
     bottom: 10px;
     box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
     border: 1px solid #e2e8f0;
