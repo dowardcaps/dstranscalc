@@ -99,6 +99,7 @@ const services = [
 
   // SCAN & OTHERS
   { name: "Scan (Any size)", price: 10, group: "Scan" },
+  { name: "Resume Typing Job", price: 50, group: "Other" },
 ];
 
 const groupColors = {
