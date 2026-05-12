@@ -9,8 +9,8 @@ const services = [
   { name: "Long (B&W)", price: 7, group: "Printing" },
   { name: "Long (Partial)", price: 8, group: "Printing" },
   { name: "Long (Full Color)", price: 15, group: "Printing" },
-  { name: "Back to back Add (B&W)", price: 2, group: "Printing" },
-  { name: "Back to back Add (Partial/Full)", price: 5, group: "Printing" },
+  { name: "Back to back Add (B&W/Partial)", price: 2, group: "Printing" },
+  { name: "Back to back Add (Full)", price: 5, group: "Printing" },
 
   // XEROX
   { name: "A4 (B&W)", price: 4, group: "Xerox" },
@@ -22,8 +22,8 @@ const services = [
   { name: "Long (B&W)", price: 5, group: "Xerox" },
   { name: "Long (Partial)", price: 7, group: "Xerox" },
   { name: "Long (Full Color)", price: 10, group: "Xerox" },
-  { name: "Back to back Add (B&W)", price: 2, group: "Xerox" },
-  { name: "Back to back Add (Partial/Full)", price: 5, group: "Xerox" },
+  { name: "Back to back Add (B&W/Partial)", price: 2, group: "Xerox" },
+  { name: "Back to back Add (Full)", price: 5, group: "Xerox" },
 
   // RUSH ID PACKAGES
   { name: "P1 - 9pcs 1x1", price: 50, group: "Rush ID" },
