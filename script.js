@@ -18,7 +18,7 @@ const services = [
   { name: "A4 (Full Color)", price: 9, group: "Xerox" },
   { name: "Letter (B&W)", price: 4, group: "Xerox" },
   { name: "Letter (Partial)", price: 6, group: "Xerox" },
-  { name: "Letter (Full Color)", price: 9, group: "Xerox" },
+  { name: "Letter (Full Color)", price: 8, group: "Xerox" },
   { name: "Long (B&W)", price: 5, group: "Xerox" },
   { name: "Long (Partial)", price: 7, group: "Xerox" },
   { name: "Long (Full Color)", price: 10, group: "Xerox" },
