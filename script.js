@@ -6,9 +6,9 @@ const services = [
   { name: "Letter (B&W)", price: 5, group: "Printing" },
   { name: "Letter (Partial)", price: 7, group: "Printing" },
   { name: "Letter (Full Color)", price: 10, group: "Printing" },
-  { name: "Long (B&W)", price: 7, group: "Printing" },
+  { name: "Long (B&W)", price: 6, group: "Printing" },
   { name: "Long (Partial)", price: 8, group: "Printing" },
-  { name: "Long (Full Color)", price: 15, group: "Printing" },
+  { name: "Long (Full Color)", price: 12, group: "Printing" },
   { name: "Back to back Add (B&W/Partial)", price: 2, group: "Printing" },
   { name: "Back to back Add (Full)", price: 5, group: "Printing" },
 
