@@ -35,6 +35,7 @@ const services = [
   { name: "P4 - 4pcs 2x2 & 6pcs 1x1", price: 60, group: "Rush ID" },
   { name: "P5 - 3pcs 2x2, Passport, & 4pcs 1x1", price: 70, group: "Rush ID" },
   { name: "P6 - 2pcs 2x2 & 4pcs 1x1", price: 40, group: "Rush ID" },
+  { name: "P7 - 2pcs 2x3", price: 30, group: "Rush ID" },
   { name: "Add-on: Change Attire", price: 10, group: "Rush ID" },
   { name: "Add-on: Get Soft copy", price: 10, group: "Rush ID" },
 
