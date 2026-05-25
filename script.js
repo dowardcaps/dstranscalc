@@ -104,6 +104,8 @@ const services = [
   // SCAN & OTHERS
   { name: "Scan (Any size)", price: 10, group: "Scan" },
   { name: "Resume Typing Job", price: 50, group: "Other" },
+  { name: "Name Tag", price: 50, group: "Other" },
+  { name: "A4 Name/Subjects Sticker label", price: 50, group: "Other" },
 ];
 
 const groupColors = {
