@@ -85,7 +85,7 @@ const services = [
   { name: "Scatch Tape 12mm", price: 10, group: "Stationery" },
   { name: "Scatch Tape 12mm", price: 26, group: "Stationery" },
   { name: "Scatch Tape 24mm", price: 30, group: "Stationery" },
-  { name: "Scissors", price: 18, group: "Stationery" },
+  { name: "Scissors", price: 20, group: "Stationery" },
   { name: "HBW Correction Tape", price: 25, group: "Stationery" },
   { name: "Index Card 1/8 2pcs.", price: 1, group: "Stationery" },
   { name: "Index Card 1/4 1pc.", price: 1, group: "Stationery" },
