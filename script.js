@@ -101,6 +101,7 @@ const services = [
   { name: "Quaff A4 Photo Paper 1pc.", price: 5, group: "Stationery" },
   { name: "Quaff A4 Photo Paper 1pack", price: 85, group: "Stationery" },
   { name: "ID lace", price: 15, group: "Stationery" },
+  { name: "Ruler", price: 10, group: "Stationery" },
 
   // SCAN & OTHERS
   { name: "Scan (Any size)", price: 10, group: "Scan" },
