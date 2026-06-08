@@ -107,6 +107,7 @@ const services = [
   { name: "Scan (Any size)", price: 10, group: "Scan" },
   { name: "Resume Typing Job", price: 50, group: "Other" },
   { name: "Name Tag", price: 50, group: "Other" },
+  { name: "Name Tag with lace", price: 60, group: "Other" },
   { name: "A4 Name/Subjects Sticker label", price: 50, group: "Other" },
   { name: "Photo Editing Minor Enhancement", price: 30, group: "Other" },
   { name: "A4 1pc Laminating Film", price: 10, group: "Other" },
