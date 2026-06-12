@@ -63,7 +63,7 @@ const services = [
   { name: "PAG_IBIG New Member", price: 50, group: "Assistance" },
   { name: "PAG_IBIG Generate and Print PRN", price: 30, group: "Assistance" },
 
-  // STATIONARY
+  // STATIONERY
   { name: "Brown Envelope (Short)", price: 6, group: "Stationery" },
   { name: "Brown Envelope (Long)", price: 8, group: "Stationery" },
   { name: "Plastic Envelope (Short)", price: 12, group: "Stationery" },
@@ -114,34 +114,73 @@ const services = [
 ];
 
 const groupColors = {
-  "Printing": "#002c8a", // Blue
-  "Xerox": "#ff6e6e",    // Red
-  "Rush ID": "#8b5cf6",  // Purple
-  "Photo": "#bd7800",    // Amber/Orange
-  "Laminate": "#10b981", // Emerald/Green
-  "Scan": "#64748b"      // Slate/Gray
+  "Printing": "#002c8a",
+  "Xerox": "#ff6e6e",
+  "Rush ID": "#8b5cf6",
+  "Photo": "#bd7800",
+  "Laminate": "#10b981",
+  "Scan": "#64748b"
 };
 
-// Global State
+// =====================
+// POS Global State
+// =====================
 let transactions = [];
 let transactionCounter = 0;
 let activeTabIndex = 0;
-
-// Current Tab State Pointers
 let cart = [];
 let currentPage = 1;
 const itemsPerPage = 7;
 let filteredData = [...services];
 let currentTransactionTotal = 0;
 
-// Application Setup
-function init() {
-  if (transactions.length === 0) {
-      addNewTransaction();
+// =====================
+// ORDERS Global State
+// =====================
+const ORDERS_STORAGE_KEY = "dsprints_orders";
+let orders = [];          // array of order objects
+let editingOrderId = null; // null = new, string = editing id
+let deletingOrderId = null;
+
+// =====================
+// View Switcher
+// =====================
+function switchView(view) {
+  const posView = document.getElementById("pos-view");
+  const ordersView = document.getElementById("orders-view");
+  const btnPos = document.getElementById("btn-pos-view");
+  const btnOrders = document.getElementById("btn-orders-view");
+  const resetBtn = document.querySelector(".mobile-reset");
+
+  if (view === "pos") {
+    posView.style.display = "";
+    ordersView.style.display = "none";
+    btnPos.classList.add("active");
+    btnOrders.classList.remove("active");
+    resetBtn.style.display = "";
+  } else {
+    posView.style.display = "none";
+    ordersView.style.display = "";
+    btnPos.classList.remove("active");
+    btnOrders.classList.add("active");
+    resetBtn.style.display = "none";
+    renderOrders();
   }
 }
 
+// =====================
+// Application Setup
+// =====================
+function init() {
+  loadOrdersFromStorage();
+  if (transactions.length === 0) {
+    addNewTransaction();
+  }
+}
+
+// =====================
 // Transaction Tabs Management
+// =====================
 function getTransactionLabel(index) {
   let label = "";
   while (index >= 0) {
@@ -154,7 +193,6 @@ function getTransactionLabel(index) {
 function addNewTransaction() {
   const newId = Date.now();
   const letterLabel = getTransactionLabel(transactionCounter);
-
   transactions.push({
     id: newId,
     name: `Transaction ${letterLabel}`,
@@ -162,8 +200,7 @@ function addNewTransaction() {
     searchTerm: "",
     currentPage: 1
   });
-  
-  transactionCounter++; 
+  transactionCounter++;
   switchTab(transactions.length - 1);
 }
 
@@ -171,11 +208,9 @@ function switchTab(index) {
   activeTabIndex = index;
   syncGlobalState();
   renderTabs();
-  
   const searchInput = document.getElementById("serviceSearch");
   if (searchInput) searchInput.value = transactions[activeTabIndex].searchTerm;
-  
-  filterServices(); 
+  filterServices();
   updateTotals();
   updateSummary();
 }
@@ -190,10 +225,10 @@ function renderTabs() {
   tabsList.innerHTML = "";
   transactions.forEach((tab, index) => {
     const tabEl = document.createElement("button");
-    tabEl.className = `tab-item ${index === activeTabIndex ? 'active' : ''}`;
+    tabEl.className = `tab-item ${index === activeTabIndex ? "active" : ""}`;
     tabEl.innerHTML = `
       ${tab.name}
-      ${transactions.length > 1 ? `<span class="close-tab" onclick="removeTab(event, ${index})">×</span>` : ''}
+      ${transactions.length > 1 ? `<span class="close-tab" onclick="removeTab(event, ${index})">×</span>` : ""}
     `;
     tabEl.onclick = () => switchTab(index);
     tabsList.appendChild(tabEl);
@@ -203,7 +238,6 @@ function renderTabs() {
 function removeTab(event, index) {
   event.stopPropagation();
   if (transactions.length <= 1) return;
-  
   transactions.splice(index, 1);
   if (activeTabIndex >= transactions.length) {
     activeTabIndex = transactions.length - 1;
@@ -211,11 +245,12 @@ function removeTab(event, index) {
   switchTab(activeTabIndex);
 }
 
-// Table & Content Generation
+// =====================
+// Table & Content
+// =====================
 function renderTable() {
   const tbody = document.getElementById("service-rows");
   tbody.innerHTML = "";
-
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const pageData = filteredData.slice(startIndex, endIndex);
@@ -224,56 +259,45 @@ function renderTable() {
     const originalIndex = services.indexOf(s);
     const badgeColor = groupColors[s.group] || "#64748b";
     const row = document.createElement("tr");
-    
     if (cart[originalIndex] > 0) row.className = "active-row";
-
     row.innerHTML = `
       <td data-label="Item"><strong>${s.name}</strong></td>
       <td data-label="Category">
-          <span class="badge" style="background-color: ${badgeColor}; color: white; padding: 4px 8px; border-radius: 6px; font-size: 1rem; font-weight: 700;">
-              ${s.group}
-          </span>
+        <span class="badge" style="background-color:${badgeColor}; color:white; padding:4px 8px; border-radius:6px; font-size:1rem; font-weight:700;">
+          ${s.group}
+        </span>
       </td>
       <td data-label="Price" class="price-cell">₱${s.price.toFixed(2)}</td>
       <td data-label="Action">
-          <div class="controls">
-              <button class="btn-ctrl btn-minus" onclick="changeQty(${originalIndex}, -1)" ${cart[originalIndex] === 0 ? "disabled" : ""}>-</button>
-              <input type="number" 
-                     class="qty-input" 
-                     value="${cart[originalIndex]}" 
-                     min="0" 
-                     onchange="updateQtyInput(${originalIndex}, this.value)">
-              <button class="btn-ctrl btn-plus" onclick="changeQty(${originalIndex}, 1)">+</button>
-          </div>
+        <div class="controls">
+          <button class="btn-ctrl btn-minus" onclick="changeQty(${originalIndex}, -1)" ${cart[originalIndex] === 0 ? "disabled" : ""}>-</button>
+          <input type="number" class="qty-input" value="${cart[originalIndex]}" min="0" onchange="updateQtyInput(${originalIndex}, this.value)">
+          <button class="btn-ctrl btn-plus" onclick="changeQty(${originalIndex}, 1)">+</button>
+        </div>
       </td>
     `;
     tbody.appendChild(row);
   });
-
   updatePaginationUI();
 }
 
 function filterServices() {
   const searchInput = document.getElementById("serviceSearch");
   const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
-  
   transactions[activeTabIndex].searchTerm = searchTerm;
-
   filteredData = services.filter((s) =>
     s.name.toLowerCase().includes(searchTerm) ||
     s.group.toLowerCase().includes(searchTerm)
   );
-
   transactions[activeTabIndex].currentPage = 1;
-  currentPage = 1; 
+  currentPage = 1;
   renderTable();
 }
 
-// Input Controllers
 function changeQty(index, delta) {
   cart[index] = Math.max(0, cart[index] + delta);
   updateTotals();
-  updateSummary(); 
+  updateSummary();
   renderTable();
 }
 
@@ -287,29 +311,24 @@ function updateQtyInput(index, value) {
 
 function resetAll() {
   if (confirm("Clear current order?")) {
-    cart.fill(0); // Using .fill ensures array reference is kept alive
-    
+    cart.fill(0);
     const searchInput = document.getElementById("serviceSearch");
     if (searchInput) searchInput.value = "";
-    
-    filterServices(); 
+    filterServices();
     updateTotals();
     updateSummary();
   }
 }
 
 function resetSearch() {
-    const searchInput = document.getElementById("serviceSearch");
-    if (searchInput) searchInput.value = "";
-
-    filterServices(); 
-    updateTotals();
-    updateSummary();
-    renderTable();
+  const searchInput = document.getElementById("serviceSearch");
+  if (searchInput) searchInput.value = "";
+  filterServices();
+  updateTotals();
+  updateSummary();
+  renderTable();
 }
 
-
-// Summaries & Totals
 function updateTotals() {
   let grandTotal = 0;
   let totalItems = 0;
@@ -325,7 +344,6 @@ function updateSummary() {
   const summaryContainer = document.getElementById("order-summary-container");
   const summaryItems = document.getElementById("summary-items");
   summaryItems.innerHTML = "";
-
   let detailsText = "";
   let hasItems = false;
   const groups = {};
@@ -339,11 +357,10 @@ function updateSummary() {
   });
 
   summaryContainer.style.display = "block";
-
   if (hasItems) {
     for (const group in groups) {
       const headerColor = groupColors[group] || "#000";
-      detailsText += `<strong style="color: ${headerColor}">${group}</strong>\n`;
+      detailsText += `<strong style="color:${headerColor}">${group}</strong>\n`;
       detailsText += groups[group].join(",\n") + "\n\n";
     }
     const row = document.createElement("tr");
@@ -351,50 +368,42 @@ function updateSummary() {
     summaryItems.appendChild(row);
   } else {
     const row = document.createElement("tr");
-    row.innerHTML = `<td class="details-content" style="color: #94a3b8; font-style: italic;">No items added yet...</td>`;
+    row.innerHTML = `<td class="details-content" style="color:#94a3b8; font-style:italic;">No items added yet...</td>`;
     summaryItems.appendChild(row);
   }
 }
 
 function copySummary() {
   const groups = {};
-  
   services.forEach((s, index) => {
     if (cart[index] > 0) {
       if (!groups[s.group]) groups[s.group] = [];
       groups[s.group].push(`${s.name} - ${cart[index]} x ₱${s.price} = ₱${s.price * cart[index]}`);
     }
   });
-
   if (Object.keys(groups).length === 0) return alert("Cart is empty!");
-
-  let textToCopy = ``;
+  let textToCopy = "";
   for (const group in groups) {
     textToCopy += `[${group}]\n${groups[group].join("\n")}\n`;
   }
-
   navigator.clipboard.writeText(textToCopy).then(() => {
     const btn = document.querySelector(".copy-btn");
     btn.innerText = "✅ Copied!";
     btn.style.background = "#22c55e";
-    setTimeout(() => {
-      btn.innerText = "Copy";
-      btn.style.background = "white";
-    }, 2000);
+    setTimeout(() => { btn.innerText = "Copy"; btn.style.background = "white"; }, 2000);
   }).catch((err) => console.error("Failed to copy: ", err));
 }
 
-// Payment Modals
+// =====================
+// Payment Modal
+// =====================
 function openPaymentModal() {
   currentTransactionTotal = services.reduce((total, s, i) => total + (s.price * cart[i]), 0);
-
   if (currentTransactionTotal === 0) return alert("Cart is empty!");
-
   document.getElementById("pay-total-display").innerText = `₱${currentTransactionTotal.toFixed(2)}`;
   document.getElementById("cashReceived").value = "";
   document.getElementById("change-amount").innerText = "₱0.00";
   document.getElementById("payment-modal").style.display = "flex";
-  
   setTimeout(() => document.getElementById("cashReceived").focus(), 100);
 }
 
@@ -405,7 +414,6 @@ function closePaymentModal() {
 function calculateChange() {
   const cash = parseFloat(document.getElementById("cashReceived").value) || 0;
   const change = cash - currentTransactionTotal;
-  
   const display = document.getElementById("change-amount");
   display.innerText = `₱${Math.max(0, change).toFixed(2)}`;
   display.style.color = change < 0 ? "var(--danger)" : "var(--success)";
@@ -413,16 +421,10 @@ function calculateChange() {
 
 function completePayment() {
   const cash = parseFloat(document.getElementById("cashReceived").value) || 0;
-  
-  if (cash < currentTransactionTotal) {
-    return alert("Insufficient cash provided!");
-  }
-
+  if (cash < currentTransactionTotal) return alert("Insufficient cash provided!");
   const btn = document.getElementById("btn-done-payment");
   btn.disabled = true;
-
   showSuccessModal("Payment Complete");
-  
   setTimeout(() => {
     closePaymentModal();
     cart.fill(0);
@@ -433,20 +435,16 @@ function completePayment() {
   }, 1000);
 }
 
-// Reusable Utilities
 function showSuccessModal(message) {
   const modal = document.getElementById("success-modal");
   document.getElementById("success-message").innerText = message;
   modal.style.display = "flex";
-  setTimeout(() => {
-      modal.style.display = "none";
-  }, 1500);
+  setTimeout(() => { modal.style.display = "none"; }, 1500);
 }
 
 function changePage(direction) {
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const nextStep = currentPage + direction;
-
   if (nextStep >= 1 && nextStep <= totalPages) {
     currentPage = nextStep;
     transactions[activeTabIndex].currentPage = currentPage;
@@ -461,5 +459,213 @@ function updatePaginationUI() {
   document.getElementById("nextPage").disabled = currentPage === totalPages;
 }
 
-// Boot up
+// =====================
+// ORDERS – localStorage
+// =====================
+function loadOrdersFromStorage() {
+  try {
+    const stored = localStorage.getItem(ORDERS_STORAGE_KEY);
+    orders = stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    orders = [];
+  }
+}
+
+function saveOrdersToStorage() {
+  try {
+    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+  } catch (e) {
+    console.error("Failed to save orders:", e);
+  }
+}
+
+// =====================
+// ORDERS – Render
+// =====================
+function renderOrders() {
+  const searchTerm = (document.getElementById("ordersSearch")?.value || "").toLowerCase();
+  const filterStatus = document.getElementById("ordersFilter")?.value || "all";
+  const list = document.getElementById("orders-list");
+  const empty = document.getElementById("orders-empty");
+
+  let filtered = orders.filter((o) => {
+    const matchSearch =
+      o.customer.toLowerCase().includes(searchTerm) ||
+      o.details.toLowerCase().includes(searchTerm) ||
+      (o.notes || "").toLowerCase().includes(searchTerm);
+    const matchStatus = filterStatus === "all" || o.status === filterStatus;
+    return matchSearch && matchStatus;
+  });
+
+  // Sort: Not Started first, then Pending, then Completed, then by date desc
+  const statusOrder = { "Not Started": 0, "Pending": 1, "Completed": 2 };
+  filtered.sort((a, b) => {
+    if (statusOrder[a.status] !== statusOrder[b.status]) {
+      return statusOrder[a.status] - statusOrder[b.status];
+    }
+    return b.createdAt - a.createdAt;
+  });
+
+  list.innerHTML = "";
+
+  if (filtered.length === 0) {
+    list.style.display = "none";
+    empty.style.display = "";
+    return;
+  }
+
+  list.style.display = "grid";
+  empty.style.display = "none";
+
+  filtered.forEach((order) => {
+    const card = document.createElement("div");
+    const statusClass = "status-" + order.status.toLowerCase().replace(" ", "-");
+    const badgeClass = "badge-" + order.status.toLowerCase().replace(" ", "-");
+    const amountDisplay = order.amount > 0 ? `₱${parseFloat(order.amount).toFixed(2)}` : "—";
+    const dateStr = new Date(order.createdAt).toLocaleDateString("en-PH", {
+      month: "short", day: "numeric", year: "numeric"
+    });
+
+    card.className = `order-card ${statusClass}`;
+    card.innerHTML = `
+      <div class="order-card-header">
+        <div class="order-customer">${escapeHtml(order.customer) || "Unnamed Customer"}</div>
+        <span class="status-badge ${badgeClass}">${order.status}</span>
+      </div>
+      ${order.details ? `<div class="order-details-text">${escapeHtml(order.details)}</div>` : ""}
+      <div class="order-meta">
+        <span class="order-amount">${amountDisplay}</span>
+        <span class="order-date">${dateStr}</span>
+      </div>
+      ${order.notes ? `<div class="order-notes-text">📝 ${escapeHtml(order.notes)}</div>` : ""}
+      <div class="order-card-actions">
+        <button class="btn-order-edit" onclick="openOrderModal('${order.id}')">✏️ Edit</button>
+        <button class="btn-order-delete" onclick="openDeleteModal('${order.id}')">🗑️ Delete</button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+// =====================
+// ORDERS – Create / Edit Modal
+// =====================
+function openOrderModal(orderId = null) {
+  editingOrderId = orderId;
+  const modal = document.getElementById("order-modal");
+  const title = document.getElementById("order-modal-title");
+
+  if (orderId) {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return;
+    title.textContent = "Edit Order";
+    document.getElementById("order-customer").value = order.customer;
+    document.getElementById("order-details").value = order.details;
+    document.getElementById("order-amount").value = order.amount || "";
+    document.getElementById("order-status").value = order.status;
+    document.getElementById("order-notes").value = order.notes || "";
+  } else {
+    title.textContent = "New Order";
+    document.getElementById("order-customer").value = "";
+    document.getElementById("order-details").value = "";
+    document.getElementById("order-amount").value = "";
+    document.getElementById("order-status").value = "Not Started";
+    document.getElementById("order-notes").value = "";
+  }
+
+  modal.style.display = "flex";
+  setTimeout(() => document.getElementById("order-customer").focus(), 100);
+}
+
+function closeOrderModal() {
+  document.getElementById("order-modal").style.display = "none";
+  editingOrderId = null;
+}
+
+function saveOrder() {
+  const customer = document.getElementById("order-customer").value.trim();
+  const details = document.getElementById("order-details").value.trim();
+  const amount = parseFloat(document.getElementById("order-amount").value) || 0;
+  const status = document.getElementById("order-status").value;
+  const notes = document.getElementById("order-notes").value.trim();
+
+  if (!customer && !details) {
+    alert("Please enter a customer name or order details.");
+    return;
+  }
+
+  if (editingOrderId) {
+    // Update existing
+    const idx = orders.findIndex((o) => o.id === editingOrderId);
+    if (idx !== -1) {
+      orders[idx] = { ...orders[idx], customer, details, amount, status, notes, updatedAt: Date.now() };
+    }
+  } else {
+    // Create new
+    orders.push({
+      id: "order_" + Date.now(),
+      customer,
+      details,
+      amount,
+      status,
+      notes,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    });
+  }
+
+  saveOrdersToStorage();
+  closeOrderModal();
+  renderOrders();
+  showSuccessModal(editingOrderId ? "Order Updated" : "Order Saved");
+}
+
+// =====================
+// ORDERS – Delete
+// =====================
+function openDeleteModal(orderId) {
+  deletingOrderId = orderId;
+  const order = orders.find((o) => o.id === orderId);
+  const nameEl = document.getElementById("delete-modal-name");
+  nameEl.textContent = order
+    ? `"${order.customer || order.details.slice(0, 40) || "this order"}" will be permanently removed.`
+    : "This will permanently remove the order.";
+  document.getElementById("delete-modal").style.display = "flex";
+}
+
+function closeDeleteModal() {
+  document.getElementById("delete-modal").style.display = "none";
+  deletingOrderId = null;
+}
+
+function confirmDeleteOrder() {
+  if (!deletingOrderId) return;
+  orders = orders.filter((o) => o.id !== deletingOrderId);
+  saveOrdersToStorage();
+  closeDeleteModal();
+  renderOrders();
+  showSuccessModal("Order Deleted");
+}
+
+// =====================
+// Utility
+// =====================
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// Close modals on overlay click
+document.addEventListener("click", (e) => {
+  if (e.target.id === "order-modal") closeOrderModal();
+  if (e.target.id === "delete-modal") closeDeleteModal();
+  if (e.target.id === "payment-modal") closePaymentModal();
+});
+
+// =====================
+// Boot
+// =====================
 init();
