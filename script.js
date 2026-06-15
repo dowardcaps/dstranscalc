@@ -94,6 +94,11 @@ const services = [
   { name: "Bond Paper (Short) 20pcs.", price: 10, group: "Stationery" },
   { name: "Bond Paper (A4) 20pcs.", price: 12, group: "Stationery" },
   { name: "Bond Paper (Long) 20pcs.", price: 15, group: "Stationery" },
+
+  { name: "Bond Paper (Short) 2pcs.", price: 1, group: "Stationery" },
+  { name: "Bond Paper (A4) 2pcs.", price: 1, group: "Stationery" },
+  { name: "Bond Paper (Long) 1pc.", price: 1, group: "Stationery" },
+
   { name: "Oslo Paper 10pcs.", price: 10, group: "Stationery" },
   { name: "Clear Sliding Folder (Short)", price: 10, group: "Stationery" },
   { name: "Clear Sliding Folder (Long)", price: 12, group: "Stationery" },
