@@ -36,6 +36,7 @@ const services = [
   { name: "P5 - 3pcs 2x2, Passport, & 4pcs 1x1", price: 70, group: "Rush ID" },
   { name: "P6 - 2pcs 2x2 & 4pcs 1x1", price: 40, group: "Rush ID" },
   { name: "P7 - 2pcs 2x3", price: 30, group: "Rush ID" },
+  
   { name: "Add-on: Change Attire", price: 10, group: "Rush ID" },
   { name: "Add-on: Get Soft copy", price: 10, group: "Rush ID" },
 
@@ -87,9 +88,12 @@ const services = [
   { name: "Scatch Tape 24mm", price: 30, group: "Stationery" },
   { name: "Scissors", price: 20, group: "Stationery" },
   { name: "HBW Correction Tape", price: 25, group: "Stationery" },
+
   { name: "Index Card 1/8 2pcs.", price: 1, group: "Stationery" },
   { name: "Index Card 1/4 1pc.", price: 1, group: "Stationery" },
   { name: "Index Card 1/2 1pc.", price: 2, group: "Stationery" },
+  { name: "Index Card 1/2 3pcs.", price: 5, group: "Stationery" },
+
   { name: "Assorted Colored Paper", price: 10, group: "Stationery" },
   { name: "Bond Paper (Short) 20pcs.", price: 10, group: "Stationery" },
   { name: "Bond Paper (A4) 20pcs.", price: 12, group: "Stationery" },
