@@ -384,3 +384,195 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   .pos-table td { display: flex; justify-content: space-between; align-items: center; border: none; padding: 5px 0; }
   .pos-table td::before { content: attr(data-label); font-weight: 700; color: #64748b; }
 }
+
+/* ============================
+   SERVICES MANAGER
+   ============================ */
+.sm-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.sm-filters {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+.sm-filters input {
+  flex: 1;
+  min-width: 160px;
+  padding: 10px 14px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+}
+.sm-filters input:focus { border-color: var(--primary); }
+.sm-filters select {
+  padding: 10px 14px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: white;
+  cursor: pointer;
+  outline: none;
+}
+.sm-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sm-count {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #64748b;
+  white-space: nowrap;
+}
+.btn-sm-add {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 900;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-sm-add:hover { background: #1d4ed8; }
+
+.btn-sm-reset {
+  background: white;
+  color: #64748b;
+  border: 2px solid #e2e8f0;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-sm-reset:hover { border-color: var(--danger); color: var(--danger); }
+
+/* Services layout: table + color panel side by side */
+.sm-layout {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+.sm-table-area {
+  flex: 2;
+  min-width: 0;
+}
+.sm-table td, .sm-table th {
+  padding: 11px 12px;
+}
+.sm-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+.btn-sm-edit {
+  background: #eff6ff;
+  color: var(--primary);
+  border: 1px solid #bfdbfe;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-sm-edit:hover { background: #dbeafe; }
+.btn-sm-delete {
+  background: #fef2f2;
+  color: var(--danger);
+  border: 1px solid #fecaca;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-sm-delete:hover { background: #fee2e2; }
+
+/* Group Color Panel */
+.gc-panel {
+  flex: 0 0 240px;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  position: sticky;
+  top: 10px;
+}
+.gc-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: -8px 0 14px;
+  line-height: 1.4;
+}
+.gc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+.gc-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e293b;
+  flex: 1;
+}
+.gc-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.gc-color-input {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  padding: 2px;
+  cursor: pointer;
+  background: none;
+}
+.gc-hex {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  font-family: monospace;
+  min-width: 52px;
+}
+
+/* Service modal hint */
+.svc-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: -4px;
+  line-height: 1.4;
+}
+
+/* Mobile overrides for Services */
+@media (max-width: 800px) {
+  .sm-layout { flex-direction: column; }
+  .gc-panel { flex: unset; width: 100%; box-sizing: border-box; position: static; }
+  .sm-toolbar { flex-direction: column; align-items: stretch; }
+  .sm-toolbar-right { justify-content: space-between; }
+}

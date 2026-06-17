@@ -14,22 +14,20 @@
         <h1>DS Prints</h1>
         <div class="header-right">
           <div class="view-switcher">
-            <button class="view-btn active" id="btn-pos-view" onclick="switchView('pos')">🖨️ POS</button>
-            <button class="view-btn" id="btn-orders-view" onclick="switchView('orders')">📋 Orders</button>
+            <button class="view-btn active" id="btn-pos-view"      onclick="switchView('pos')">🖨️ POS</button>
+            <button class="view-btn"        id="btn-orders-view"   onclick="switchView('orders')">📋 Orders</button>
+            <button class="view-btn"        id="btn-services-view" onclick="switchView('services')">⚙️ Services</button>
           </div>
           <button class="reset-btn mobile-reset" onclick="resetAll()">Reset</button>
         </div>
       </header>
 
-      <!-- ====== POS VIEW ====== -->
+      <!-- ══════════════ POS VIEW ══════════════ -->
       <div id="pos-view">
-        <!-- Tabs -->
         <div class="tabs-container">
           <div id="tabs-list" class="tabs-list"></div>
           <button class="add-tab-btn" onclick="addNewTransaction()">+ New Transaction</button>
         </div>
-
-        <!-- Search & Reset -->
         <div class="search-reset_wrapper">
           <div class="search-container">
             <div class="input-group">
@@ -38,14 +36,12 @@
             </div>
           </div>
         </div>
-
-        <!-- Main Layout -->
         <div class="table-summary_wrapper">
           <div class="table-area">
             <div class="table-wrapper">
               <table class="pos-table">
                 <thead>
-                  <tr id="table-header-row">
+                  <tr>
                     <th>Service / Item</th>
                     <th>Category</th>
                     <th>Price</th>
@@ -56,12 +52,11 @@
               </table>
               <div class="pagination-container">
                 <button id="prevPage" class="btn-page" onclick="changePage(-1)">&lt;&lt;</button>
-                <span id="pageInfo">Page 1 of 1</span>
+                <span id="pageInfo">1 of 1</span>
                 <button id="nextPage" class="btn-page" onclick="changePage(1)">&gt;&gt;</button>
               </div>
             </div>
           </div>
-
           <div class="summary">
             <h3>Summary</h3>
             <div class="summary-header">
@@ -69,9 +64,7 @@
               <hr class="dashed-line" />
             </div>
             <div id="order-summary-container" class="summary-wrapper">
-              <table class="summary-table">
-                <tbody id="summary-items"></tbody>
-              </table>
+              <table class="summary-table"><tbody id="summary-items"></tbody></table>
             </div>
             <div class="total-summary">
               <div class="totals-text">
@@ -84,7 +77,7 @@
         </div>
       </div>
 
-      <!-- ====== ORDERS VIEW ====== -->
+      <!-- ══════════════ ORDERS VIEW ══════════════ -->
       <div id="orders-view" style="display:none;">
         <div class="orders-toolbar">
           <div class="orders-filters">
@@ -98,27 +91,72 @@
           </div>
           <button class="btn-new-order" onclick="openOrderModal()">+ New Order</button>
         </div>
-
-        <div id="orders-list" class="orders-list">
-          <!-- rendered by JS -->
-        </div>
-
+        <div id="orders-list" class="orders-list"></div>
         <div id="orders-empty" class="orders-empty" style="display:none;">
           <div class="empty-icon">📋</div>
           <p>No orders yet. Create your first order!</p>
         </div>
       </div>
-    </div>
 
-    <!-- Success Modal -->
-    <div id="success-modal" class="modal-overlay" style="display:none; z-index:10000;">
+      <!-- ══════════════ SERVICES MANAGER VIEW ══════════════ -->
+      <div id="services-view" style="display:none;">
+        <div class="sm-toolbar">
+          <div class="sm-filters">
+            <input type="text" id="sm-search" placeholder="Search services..." oninput="renderServicesManager()" />
+            <select id="sm-filter-group" onchange="renderServicesManager()">
+              <option value="all">All Groups</option>
+            </select>
+          </div>
+          <div class="sm-toolbar-right">
+            <span id="sm-count" class="sm-count"></span>
+            <button class="btn-sm-add" onclick="openServiceModal()">+ Add Service</button>
+            <button class="btn-sm-reset" onclick="resetServicesToDefault()" title="Reset all services to defaults">↺ Reset Defaults</button>
+          </div>
+        </div>
+
+        <div class="sm-layout">
+          <!-- Services Table -->
+          <div class="sm-table-area">
+            <div class="table-wrapper">
+              <table class="pos-table sm-table">
+                <thead>
+                  <tr>
+                    <th>Service / Item</th>
+                    <th>Group</th>
+                    <th>Price</th>
+                    <th class="text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="sm-tbody"></tbody>
+              </table>
+              <div class="pagination-container">
+                <button id="sm-prev" class="btn-page" onclick="smChangePage(-1)">&lt;&lt;</button>
+                <span id="sm-page-info">1 of 1</span>
+                <button id="sm-next" class="btn-page" onclick="smChangePage(1)">&gt;&gt;</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Group Color Manager -->
+          <div class="gc-panel">
+            <h3>Group Colors</h3>
+            <p class="gc-hint">Click a color swatch to change the badge color for that group.</p>
+            <div id="group-colors-list" class="gc-list"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /pos-container -->
+
+    <!-- ══ Success Modal ══ -->
+    <div id="success-modal" class="modal-overlay" style="display:none;z-index:10000;">
       <div class="modal-card success-card">
         <div class="success-icon">✓</div>
         <h3 id="success-message">Done</h3>
       </div>
     </div>
 
-    <!-- Payment Modal -->
+    <!-- ══ Payment Modal ══ -->
     <div id="payment-modal" class="modal-overlay" style="display:none;">
       <div class="modal-card">
         <div class="modal-header">
@@ -146,7 +184,7 @@
       </div>
     </div>
 
-    <!-- Order Modal (Create / Edit) -->
+    <!-- ══ Order Modal ══ -->
     <div id="order-modal" class="modal-overlay" style="display:none;">
       <div class="modal-card order-modal-card">
         <div class="modal-header">
@@ -178,7 +216,7 @@
           </div>
           <div class="order-field">
             <label>Notes (optional)</label>
-            <input type="text" id="order-notes" placeholder="e.g. Pick up tomorrow, needs lamination..." maxlength="120" />
+            <input type="text" id="order-notes" placeholder="e.g. Pick up tomorrow..." maxlength="120" />
           </div>
         </div>
         <div class="modal-footer">
@@ -188,15 +226,47 @@
       </div>
     </div>
 
-    <!-- Delete Confirm Modal -->
+    <!-- ══ Service Modal ══ -->
+    <div id="service-modal" class="modal-overlay" style="display:none;">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="service-modal-title">New Service</h3>
+          <button class="close-modal" onclick="closeServiceModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="order-field">
+            <label>Service Name</label>
+            <input type="text" id="svc-name" placeholder="e.g. A4 (B&W)" maxlength="100" />
+          </div>
+          <div class="order-field order-row-2">
+            <div>
+              <label>Price (₱)</label>
+              <input type="number" id="svc-price" placeholder="0" min="0" step="0.01" />
+            </div>
+            <div>
+              <label>Group / Category</label>
+              <input type="text" id="svc-group" placeholder="e.g. Printing" list="service-group-list" maxlength="40" />
+              <datalist id="service-group-list"></datalist>
+            </div>
+          </div>
+          <p class="svc-hint">Tip: Type an existing group name or create a new one. New groups get a default gray color — update it in Group Colors.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeServiceModal()">Cancel</button>
+          <button class="btn-save" onclick="saveService()">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Shared Delete Confirm Modal ══ -->
     <div id="delete-modal" class="modal-overlay" style="display:none;">
       <div class="modal-card delete-confirm-card">
         <div class="delete-icon">🗑️</div>
-        <h3>Delete Order?</h3>
-        <p id="delete-modal-name">This will permanently remove the order.</p>
-        <div class="modal-footer" style="justify-content:center; gap:12px;">
+        <h3 id="delete-modal-title">Delete?</h3>
+        <p id="delete-modal-name"></p>
+        <div class="modal-footer" style="justify-content:center;gap:12px;">
           <button class="btn-secondary" onclick="closeDeleteModal()">Cancel</button>
-          <button class="btn-danger" onclick="confirmDeleteOrder()">Delete</button>
+          <button class="btn-danger"    onclick="confirmDelete()">Delete</button>
         </div>
       </div>
     </div>
