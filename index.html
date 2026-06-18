@@ -18,7 +18,7 @@
             <button class="view-btn"        id="btn-orders-view"   onclick="switchView('orders')">📋 Orders</button>
             <button class="view-btn"        id="btn-services-view" onclick="switchView('services')">⚙️ Services</button>
           </div>
-          <button class="reset-btn mobile-reset" onclick="resetAll()">Reset</button>
+          
         </div>
       </header>
 
@@ -34,6 +34,9 @@
               <input type="text" id="serviceSearch" placeholder="Search (e.g. Xerox)..." onkeyup="filterServices()" />
               <button class="clear_search-btn" onclick="resetSearch()">Clear</button>
             </div>
+          </div>
+          <div class="reset-container">
+            <button class="reset-btn mobile-reset" onclick="resetAll()">Reset</button>
           </div>
         </div>
         <div class="table-summary_wrapper">

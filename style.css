@@ -356,7 +356,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   .header-right { gap: 8px; }
   .view-btn { padding: 6px 10px; font-size: 0.75rem; }
   .table-summary_wrapper { flex-direction: column; gap: 1rem; padding-bottom: 2rem; }
-  .search-reset_wrapper { flex-direction: row; gap: 10px; }
+  .search-reset_wrapper { flex-wrap: wrap; gap: 10px; }
   .mobile-reset { width: auto; padding: 0 15px; height: 45px; font-size: 0.9rem; }
   .table-area { height: auto; margin-bottom: 10px; }
   .pos-table { min-width: 450px; }
