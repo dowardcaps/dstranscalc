@@ -135,7 +135,7 @@ let transactionCounter = 0;
 let activeTabIndex     = 0;
 let cart               = {};   // { serviceId: qty } — id-based, index-free
 let currentPage        = 1;
-const itemsPerPage     = 10;
+const itemsPerPage     = 7;
 let filteredData       = [];
 let currentTransactionTotal = 0;
 
