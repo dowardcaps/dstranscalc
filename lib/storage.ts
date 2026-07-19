@@ -4,6 +4,8 @@ export const STORAGE_KEYS = {
   services: "dsprints_services",
   colors: "dsprints_group_colors",
   orders: "dsprints_orders",
+  transactions: "dsprints_transactions",
+  activeTab: "dsprints_active_tab",
 } as const;
 
 export function loadJSON<T>(key: string, fallback: T): T {

@@ -104,9 +104,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setOrders(loadJSON<Order[]>(STORAGE_KEYS.orders, []));
 
-    setTransactions([
-      { id: Date.now(), name: `Transaction ${getTransactionLabel(0)}`, cart: {}, searchTerm: "", currentPage: 1 },
-    ]);
+    const savedTx = loadJSON<Transaction[] | null>(STORAGE_KEYS.transactions, null);
+    const restoredTx: Transaction[] =
+      savedTx && savedTx.length
+        ? savedTx.map((t) => ({
+            id: t.id,
+            name: t.name,
+            cart: t.cart || {},
+            searchTerm: t.searchTerm || "",
+            currentPage: t.currentPage || 1,
+          }))
+        : [{ id: Date.now(), name: `Transaction ${getTransactionLabel(0)}`, cart: {}, searchTerm: "", currentPage: 1 }];
+    setTransactions(restoredTx);
+
+    const savedActiveTab = loadJSON<number>(STORAGE_KEYS.activeTab, 0);
+    setActiveTabIndex(Math.min(Math.max(savedActiveTab, 0), restoredTx.length - 1));
+
     setHydrated(true);
   }, []);
 
@@ -119,6 +132,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (hydrated) saveJSON(STORAGE_KEYS.orders, orders);
   }, [orders, hydrated]);
+  useEffect(() => {
+    if (hydrated) saveJSON(STORAGE_KEYS.transactions, transactions);
+  }, [transactions, hydrated]);
+  useEffect(() => {
+    if (hydrated) saveJSON(STORAGE_KEYS.activeTab, activeTabIndex);
+  }, [activeTabIndex, hydrated]);
 
   const showSuccess = useCallback((msg: string) => {
     setSuccess(msg);
