@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useApp } from "@/lib/AppContext";
-import { peso } from "@/lib/format";
+import { peso, toExcelRow } from "@/lib/format";
+import { copyToClipboard } from "@/lib/clipboard";
 
 function buildSummaryText(
   services: { id: string; name: string; price: number; group: string }[],
@@ -22,9 +23,19 @@ function buildSummaryText(
 }
 
 export default function SummaryPanel({ onPay }: { onPay: () => void }) {
-  const { services, groupColors, activeTransaction, cartTotal, cartItemCount, showAlert } =
-    useApp();
+  const {
+    services,
+    groupColors,
+    activeTransaction,
+    cartTotal,
+    cartItemCount,
+    showAlert,
+    showSuccess,
+    addDayLogEntry,
+    resetActiveCart,
+  } = useApp();
   const [copied, setCopied] = useState(false);
+  const [logged, setLogged] = useState(false);
   const { text, groups } = useMemo(
     () => buildSummaryText(services, activeTransaction.cart),
     [services, activeTransaction.cart]
@@ -36,29 +47,25 @@ export default function SummaryPanel({ onPay }: { onPay: () => void }) {
       showAlert("Cart is empty!");
       return;
     }
-    try {
-      await navigator.clipboard.writeText(text);
+    const ok = await copyToClipboard(toExcelRow(text, cartTotal));
+    if (ok) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard API can be blocked (e.g. inside a sandboxed iframe
-      // preview) — fall back to a manual copy via an offscreen textarea.
-      try {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        ta.style.position = "fixed";
-        ta.style.left = "-9999px";
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 2000);
-      } catch {
-        showAlert("Copy blocked by browser — select and copy manually.");
-      }
+    } else {
+      showAlert("Copy blocked by browser — select and copy manually.");
     }
+  };
+
+  const insertSummary = () => {
+    if (!hasItems) {
+      showAlert("Cart is empty!");
+      return;
+    }
+    addDayLogEntry(text, cartTotal);
+    resetActiveCart();
+    setLogged(true);
+    window.setTimeout(() => setLogged(false), 2000);
+    showSuccess("Added to Day Log");
   };
 
   return (
@@ -97,18 +104,31 @@ export default function SummaryPanel({ onPay }: { onPay: () => void }) {
         ))}
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-3 border-t-2 border-dashed border-paper-line pt-4">
-        <div>
-          <p className="text-xs font-semibold text-ink-900/45">
-            {cartItemCount} item{cartItemCount !== 1 ? "s" : ""}
-          </p>
-          <p className="font-display text-xl font-bold text-ink-600">{peso(cartTotal)}</p>
+      <div className="mt-3 flex flex-col gap-3 border-t-2 border-dashed border-paper-line pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-ink-900/45">
+              {cartItemCount} item{cartItemCount !== 1 ? "s" : ""}
+            </p>
+            <p className="font-display text-xl font-bold text-ink-600">{peso(cartTotal)}</p>
+          </div>
+          <button
+            onClick={() => (cartTotal ? onPay() : showAlert("Cart is empty!"))}
+            className="rounded-xl bg-success px-6 py-3 text-sm font-bold text-white shadow-[0_4px_0_0_rgba(14,151,100,0.4)] transition active:translate-y-0.5 active:shadow-none"
+          >
+            💸 Pay
+          </button>
         </div>
+
         <button
-          onClick={() => (cartTotal ? onPay() : showAlert("Cart is empty!"))}
-          className="rounded-xl bg-success px-6 py-3 text-sm font-bold text-white shadow-[0_4px_0_0_rgba(14,151,100,0.4)] transition active:translate-y-0.5 active:shadow-none"
+          onClick={insertSummary}
+          className={`w-full rounded-xl border-2 px-4 py-2.5 text-sm font-bold transition-colors ${
+            logged
+              ? "border-success bg-success/10 text-success"
+              : "border-ink-400/40 text-ink-900/70 hover:bg-paper"
+          }`}
         >
-          💸 Pay
+          {logged ? "✅ Added to Day Log" : "🗒️ Insert Summary to Day Log"}
         </button>
       </div>
     </div>

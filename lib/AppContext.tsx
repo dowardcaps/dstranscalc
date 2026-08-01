@@ -10,6 +10,7 @@ import {
 } from "react";
 import {
   CartMap,
+  DayLogEntry,
   GroupColors,
   Order,
   OrderStatus,
@@ -19,17 +20,21 @@ import {
 } from "./types";
 import { DEFAULT_GROUP_COLORS, DEFAULT_SERVICES } from "./defaultData";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "./storage";
-import { getTransactionLabel, makeId } from "./format";
+import { dateKeyToLabel, getTransactionLabel, makeId, todayDateKey } from "./format";
+import { fetchCloudState, saveCloudState } from "./cloudStorage";
 import { ConfirmDialogState, CLOSED_CONFIRM } from "@/components/shared/ConfirmDialog";
 
 type NewOrderInput = Omit<Order, "id" | "createdAt" | "updatedAt">;
 type NewServiceInput = { name: string; price: number; group: string };
+type CloudStatus = "loading" | "online" | "offline";
 
 type AppContextValue = {
   // data
   services: Service[];
   groupColors: GroupColors;
   orders: Order[];
+  dayLog: DayLogEntry[];
+  cloudStatus: CloudStatus;
   // pos
   view: View;
   setView: (v: View) => void;
@@ -50,6 +55,10 @@ type AppContextValue = {
   // orders
   upsertOrder: (input: NewOrderInput, id?: string | null) => void;
   deleteOrder: (id: string) => void;
+  // day log
+  addDayLogEntry: (details: string, amount: number) => void;
+  deleteDayLogEntry: (id: string) => void;
+  clearDayLogForDate: (dateKey: string) => void;
   // services manager
   upsertService: (input: NewServiceInput, id?: string | null) => void;
   deleteService: (id: string) => void;
@@ -73,9 +82,11 @@ function seedServices(): Service[] {
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
+  const [cloudStatus, setCloudStatus] = useState<CloudStatus>("loading");
   const [services, setServices] = useState<Service[]>([]);
   const [groupColors, setGroupColors] = useState<GroupColors>({});
   const [orders, setOrders] = useState<Order[]>([]);
+  const [dayLog, setDayLog] = useState<DayLogEntry[]>([]);
 
   const [view, setView] = useState<View>("pos");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -84,60 +95,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [success, setSuccess] = useState<string | null>(null);
   const [alertMsg, setAlertMsg] = useState<string | null>(null);
   const [confirmState, setConfirmState] = useState<ConfirmDialogState>(CLOSED_CONFIRM);
-
-  // ---- initial hydrate from localStorage ----
-  useEffect(() => {
-    const sv = loadJSON<Service[] | null>(STORAGE_KEYS.services, null);
-    let loadedServices: Service[];
-    if (sv && sv.length) {
-      loadedServices = sv;
-    } else {
-      loadedServices = seedServices();
-      saveJSON(STORAGE_KEYS.services, loadedServices);
-    }
-    setServices(loadedServices);
-
-    const gc = loadJSON<GroupColors | null>(STORAGE_KEYS.colors, null);
-    const loadedColors = gc || { ...DEFAULT_GROUP_COLORS };
-    if (!gc) saveJSON(STORAGE_KEYS.colors, loadedColors);
-    setGroupColors(loadedColors);
-
-    setOrders(loadJSON<Order[]>(STORAGE_KEYS.orders, []));
-
-    const savedTx = loadJSON<Transaction[] | null>(STORAGE_KEYS.transactions, null);
-    const restoredTx: Transaction[] =
-      savedTx && savedTx.length
-        ? savedTx.map((t) => ({
-            id: t.id,
-            name: t.name,
-            cart: t.cart || {},
-            searchTerm: t.searchTerm || "",
-            currentPage: t.currentPage || 1,
-          }))
-        : [{ id: Date.now(), name: `Transaction ${getTransactionLabel(0)}`, cart: {}, searchTerm: "", currentPage: 1 }];
-    setTransactions(restoredTx);
-
-    const savedActiveTab = loadJSON<number>(STORAGE_KEYS.activeTab, 0);
-    setActiveTabIndex(Math.min(Math.max(savedActiveTab, 0), restoredTx.length - 1));
-
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (hydrated) saveJSON(STORAGE_KEYS.services, services);
-  }, [services, hydrated]);
-  useEffect(() => {
-    if (hydrated) saveJSON(STORAGE_KEYS.colors, groupColors);
-  }, [groupColors, hydrated]);
-  useEffect(() => {
-    if (hydrated) saveJSON(STORAGE_KEYS.orders, orders);
-  }, [orders, hydrated]);
-  useEffect(() => {
-    if (hydrated) saveJSON(STORAGE_KEYS.transactions, transactions);
-  }, [transactions, hydrated]);
-  useEffect(() => {
-    if (hydrated) saveJSON(STORAGE_KEYS.activeTab, activeTabIndex);
-  }, [activeTabIndex, hydrated]);
 
   const showSuccess = useCallback((msg: string) => {
     setSuccess(msg);
@@ -155,6 +112,111 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const closeConfirm = useCallback(() => {
     setConfirmState((s) => ({ ...s, open: false }));
   }, []);
+
+  // ---- initial hydrate: services / colors / orders / dayLog come from the
+  // cloud (Postgres) with a localStorage cache as an offline fallback and as
+  // the one-time seed if the cloud table is still empty. transactions and
+  // the active tab are in-progress work state and stay local-only. ----
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCloudKey<T>(key: string, fallback: T): Promise<T> {
+      const cached = loadJSON<T>(key, fallback);
+      const res = await fetchCloudState<T>(key);
+      if (res.found && res.value !== null) {
+        saveJSON(key, res.value);
+        return res.value;
+      }
+      // Cloud has nothing yet for this key — seed it with whatever's cached
+      // locally (or the default) so the cloud becomes the source of truth
+      // going forward.
+      saveCloudState(key, cached).catch((err) => console.error(`seed ${key} failed`, err));
+      return cached;
+    }
+
+    (async () => {
+      let online = true;
+      let loadedServices: Service[];
+      let loadedColors: GroupColors;
+      let loadedOrders: Order[];
+      let loadedDayLog: DayLogEntry[];
+
+      try {
+        [loadedServices, loadedColors, loadedOrders, loadedDayLog] = await Promise.all([
+          loadCloudKey<Service[]>(STORAGE_KEYS.services, seedServices()),
+          loadCloudKey<GroupColors>(STORAGE_KEYS.colors, { ...DEFAULT_GROUP_COLORS }),
+          loadCloudKey<Order[]>(STORAGE_KEYS.orders, []),
+          loadCloudKey<DayLogEntry[]>(STORAGE_KEYS.dayLog, []),
+        ]);
+      } catch (err) {
+        console.error("cloud hydrate failed, falling back to local cache", err);
+        online = false;
+        loadedServices = loadJSON<Service[]>(STORAGE_KEYS.services, seedServices());
+        loadedColors = loadJSON<GroupColors>(STORAGE_KEYS.colors, { ...DEFAULT_GROUP_COLORS });
+        loadedOrders = loadJSON<Order[]>(STORAGE_KEYS.orders, []);
+        loadedDayLog = loadJSON<DayLogEntry[]>(STORAGE_KEYS.dayLog, []);
+      }
+
+      if (cancelled) return;
+
+      setServices(loadedServices);
+      setGroupColors(loadedColors);
+      setOrders(loadedOrders);
+      setDayLog(loadedDayLog);
+      setCloudStatus(online ? "online" : "offline");
+      if (!online) {
+        showAlert("Can't reach the cloud database — showing the last saved copy on this computer.");
+      }
+
+      // ---- local-only: in-progress cart tabs ----
+      const savedTx = loadJSON<Transaction[] | null>(STORAGE_KEYS.transactions, null);
+      const restoredTx: Transaction[] =
+        savedTx && savedTx.length
+          ? savedTx.map((t) => ({
+              id: t.id,
+              name: t.name,
+              cart: t.cart || {},
+              searchTerm: t.searchTerm || "",
+              currentPage: t.currentPage || 1,
+            }))
+          : [{ id: Date.now(), name: `Transaction ${getTransactionLabel(0)}`, cart: {}, searchTerm: "", currentPage: 1 }];
+      setTransactions(restoredTx);
+
+      const savedActiveTab = loadJSON<number>(STORAGE_KEYS.activeTab, 0);
+      setActiveTabIndex(Math.min(Math.max(savedActiveTab, 0), restoredTx.length - 1));
+
+      setHydrated(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showAlert]);
+
+  useEffect(() => {
+    if (hydrated) saveJSON(STORAGE_KEYS.transactions, transactions);
+  }, [transactions, hydrated]);
+  useEffect(() => {
+    if (hydrated) saveJSON(STORAGE_KEYS.activeTab, activeTabIndex);
+  }, [activeTabIndex, hydrated]);
+
+  // Persists a piece of cloud-backed state: caches it locally right away
+  // (so a refresh never loses it, even offline) and pushes it to Postgres
+  // in the background. A failed push just means "not synced yet" — the
+  // local cache still has it, and the next successful save will catch up.
+  const persist = useCallback(
+    <T,>(key: string, value: T) => {
+      saveJSON(key, value);
+      saveCloudState(key, value)
+        .then(() => setCloudStatus("online"))
+        .catch((err) => {
+          console.error(`cloud save failed for ${key}`, err);
+          setCloudStatus("offline");
+          showAlert("Couldn't sync to the cloud — saved on this computer only for now.");
+        });
+    },
+    [showAlert]
+  );
 
   const activeTransaction = transactions[activeTabIndex] || {
     id: 0,
@@ -192,17 +254,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const removeTab = useCallback(
-    (i: number) => {
-      setTransactions((prev) => {
-        if (prev.length <= 1) return prev;
-        const next = prev.filter((_, idx) => idx !== i);
-        setActiveTabIndex((cur) => Math.min(cur >= next.length ? next.length - 1 : cur, next.length - 1));
-        return next;
-      });
-    },
-    []
-  );
+  const removeTab = useCallback((i: number) => {
+    setTransactions((prev) => {
+      if (prev.length <= 1) return prev;
+      const next = prev.filter((_, idx) => idx !== i);
+      setActiveTabIndex((cur) => Math.min(cur >= next.length ? next.length - 1 : cur, next.length - 1));
+      return next;
+    });
+  }, []);
 
   const setCartQty = useCallback(
     (serviceId: string, qty: number) => {
@@ -256,62 +315,141 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   // ---- Orders ----
-  const upsertOrder = useCallback((input: NewOrderInput, id?: string | null) => {
-    setOrders((prev) => {
-      if (id) {
-        return prev.map((o) => (o.id === id ? { ...o, ...input, updatedAt: Date.now() } : o));
-      }
-      return [
-        ...prev,
-        { ...input, id: makeId("order"), createdAt: Date.now(), updatedAt: Date.now() },
-      ];
-    });
-  }, []);
+  const upsertOrder = useCallback(
+    (input: NewOrderInput, id?: string | null) => {
+      setOrders((prev) => {
+        const next = id
+          ? prev.map((o) => (o.id === id ? { ...o, ...input, updatedAt: Date.now() } : o))
+          : [...prev, { ...input, id: makeId("order"), createdAt: Date.now(), updatedAt: Date.now() }];
+        persist(STORAGE_KEYS.orders, next);
+        return next;
+      });
+    },
+    [persist]
+  );
 
-  const deleteOrder = useCallback((id: string) => {
-    setOrders((prev) => prev.filter((o) => o.id !== id));
-  }, []);
+  const deleteOrder = useCallback(
+    (id: string) => {
+      setOrders((prev) => {
+        const next = prev.filter((o) => o.id !== id);
+        persist(STORAGE_KEYS.orders, next);
+        return next;
+      });
+    },
+    [persist]
+  );
+
+  // ---- Day log ----
+  const addDayLogEntry = useCallback(
+    (details: string, amount: number) => {
+      const dateKey = todayDateKey();
+      setDayLog((prev) => {
+        const next = [
+          ...prev,
+          {
+            id: makeId("log"),
+            dateKey,
+            dateLabel: dateKeyToLabel(dateKey),
+            details,
+            amount,
+            createdAt: Date.now(),
+          },
+        ];
+        persist(STORAGE_KEYS.dayLog, next);
+        return next;
+      });
+    },
+    [persist]
+  );
+
+  const deleteDayLogEntry = useCallback(
+    (id: string) => {
+      setDayLog((prev) => {
+        const next = prev.filter((e) => e.id !== id);
+        persist(STORAGE_KEYS.dayLog, next);
+        return next;
+      });
+    },
+    [persist]
+  );
+
+  const clearDayLogForDate = useCallback(
+    (dateKey: string) => {
+      setDayLog((prev) => {
+        const next = prev.filter((e) => e.dateKey !== dateKey);
+        persist(STORAGE_KEYS.dayLog, next);
+        return next;
+      });
+    },
+    [persist]
+  );
 
   // ---- Services manager ----
   const upsertService = useCallback(
     (input: NewServiceInput, id?: string | null) => {
       setServices((prev) => {
-        if (id) return prev.map((s) => (s.id === id ? { ...s, ...input } : s));
-        return [...prev, { ...input, id: makeId("svc") }];
+        const next = id
+          ? prev.map((s) => (s.id === id ? { ...s, ...input } : s))
+          : [...prev, { ...input, id: makeId("svc") }];
+        persist(STORAGE_KEYS.services, next);
+        return next;
       });
-      setGroupColors((prev) =>
-        prev[input.group] ? prev : { ...prev, [input.group]: "#5B5560" }
-      );
+      setGroupColors((prev) => {
+        if (prev[input.group]) return prev;
+        const next = { ...prev, [input.group]: "#5B5560" };
+        persist(STORAGE_KEYS.colors, next);
+        return next;
+      });
     },
-    []
+    [persist]
   );
 
-  const deleteService = useCallback((id: string) => {
-    setServices((prev) => prev.filter((s) => s.id !== id));
-    setTransactions((prev) =>
-      prev.map((t) => {
-        if (!(id in t.cart)) return t;
-        const cart = { ...t.cart };
-        delete cart[id];
-        return { ...t, cart };
-      })
-    );
-  }, []);
+  const deleteService = useCallback(
+    (id: string) => {
+      setServices((prev) => {
+        const next = prev.filter((s) => s.id !== id);
+        persist(STORAGE_KEYS.services, next);
+        return next;
+      });
+      setTransactions((prev) =>
+        prev.map((t) => {
+          if (!(id in t.cart)) return t;
+          const cart = { ...t.cart };
+          delete cart[id];
+          return { ...t, cart };
+        })
+      );
+    },
+    [persist]
+  );
 
-  const updateGroupColor = useCallback((group: string, color: string) => {
-    setGroupColors((prev) => ({ ...prev, [group]: color }));
-  }, []);
+  const updateGroupColor = useCallback(
+    (group: string, color: string) => {
+      setGroupColors((prev) => {
+        const next = { ...prev, [group]: color };
+        persist(STORAGE_KEYS.colors, next);
+        return next;
+      });
+    },
+    [persist]
+  );
 
   const resetServicesToDefault = useCallback(() => {
-    setServices(seedServices());
-    setGroupColors({ ...DEFAULT_GROUP_COLORS });
+    const nextServices = seedServices();
+    const nextColors = { ...DEFAULT_GROUP_COLORS };
+    setServices(nextServices);
+    setGroupColors(nextColors);
     setTransactions((prev) => prev.map((t) => ({ ...t, cart: {} })));
-  }, []);
+    persist(STORAGE_KEYS.services, nextServices);
+    persist(STORAGE_KEYS.colors, nextColors);
+  }, [persist]);
 
   const value: AppContextValue = {
     services,
     groupColors,
     orders,
+    dayLog,
+    cloudStatus,
     view,
     setView,
     transactions,
@@ -330,6 +468,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     completePayment,
     upsertOrder,
     deleteOrder,
+    addDayLogEntry,
+    deleteDayLogEntry,
+    clearDayLogForDate,
     upsertService,
     deleteService,
     updateGroupColor,
@@ -343,7 +484,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     closeConfirm,
   };
 
-  if (!hydrated) return null;
+  if (!hydrated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-paper text-sm font-semibold text-ink-900/50">
+        Loading DS Prints data…
+      </div>
+    );
+  }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

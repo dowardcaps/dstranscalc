@@ -5,6 +5,7 @@ import Header from "./Header";
 import POSView from "./pos/POSView";
 import OrdersView from "./orders/OrdersView";
 import ServicesView from "./services/ServicesView";
+import DayLogView from "./daylog/DayLogView";
 import ConfirmDialog from "./shared/ConfirmDialog";
 import SuccessToast from "./shared/SuccessToast";
 import AlertToast from "./shared/AlertToast";
@@ -18,6 +19,7 @@ export default function AppShell() {
       <main className="mt-5 pb-16">
         {view === "pos" && <POSView />}
         {view === "orders" && <OrdersView />}
+        {view === "daylog" && <DayLogView />}
         {view === "services" && <ServicesView />}
       </main>
 

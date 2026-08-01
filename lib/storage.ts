@@ -4,6 +4,7 @@ export const STORAGE_KEYS = {
   services: "dsprints_services",
   colors: "dsprints_group_colors",
   orders: "dsprints_orders",
+  dayLog: "dsprints_day_log",
   transactions: "dsprints_transactions",
   activeTab: "dsprints_active_tab",
 } as const;

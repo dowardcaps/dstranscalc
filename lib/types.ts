@@ -30,4 +30,13 @@ export type Transaction = {
   currentPage: number;
 };
 
-export type View = "pos" | "orders" | "services";
+export type DayLogEntry = {
+  id: string;
+  dateKey: string; // "2026-07-31" — for grouping/sorting
+  dateLabel: string; // "07/31/2026 FRIDAY" — matches the Excel Date column
+  details: string; // multi-line summary text, same format as Copy Summary
+  amount: number;
+  createdAt: number;
+};
+
+export type View = "pos" | "orders" | "services" | "daylog";
