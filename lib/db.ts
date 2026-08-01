@@ -7,6 +7,13 @@ if (!process.env.DATABASE_URL) {
   console.warn(
     "DATABASE_URL is not set — the Day Log / Services / Orders API routes will fail until a Neon (or other Postgres) database is connected."
   );
+} else {
+  try {
+    const host = new URL(process.env.DATABASE_URL).host;
+    console.log(`[db] Connecting to Postgres host: ${host}`);
+  } catch {
+    console.warn("[db] DATABASE_URL is set but isn't a valid URL — double-check it was copied correctly.");
+  }
 }
 
 export const sql = neon(process.env.DATABASE_URL || "");
