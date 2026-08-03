@@ -1,10 +1,9 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -20,15 +19,17 @@ function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error || "Incorrect password");
         setLoading(false);
         return;
       }
+      // Hard navigation (not router.push) — guarantees the browser actually
+      // sends the freshly-set cookie on the next request and the page
+      // fully reloads, instead of relying on the client-side router.
       const next = searchParams.get("next") || "/";
-      router.push(next);
-      router.refresh();
+      window.location.href = next;
     } catch {
       setError("Something went wrong — check your connection and try again.");
       setLoading(false);
