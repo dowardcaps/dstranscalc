@@ -45,8 +45,12 @@ export async function verifySessionToken(token: string | undefined | null): Prom
 export function sessionCookieOptions() {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
+    // SameSite=None is required for the cookie to work inside the App
+    // Tools hub's iframe preview (a cross-origin embed). Secure is
+    // mandatory whenever SameSite=None is used — modern browsers still
+    // treat http://localhost as a secure context, so local dev is fine.
+    secure: true,
+    sameSite: "none" as const,
     path: "/",
     maxAge: SESSION_MAX_AGE_MS / 1000,
   };
