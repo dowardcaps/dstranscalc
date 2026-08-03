@@ -18,6 +18,11 @@ export default function Header() {
     offline: { dot: "bg-danger", label: "Offline — saved on this computer only" },
   }[cloudStatus];
 
+  const handleLogout = async () => {
+    await fetch("/api/logout", { method: "POST" }).catch(() => {});
+    window.location.href = "/login";
+  };
+
   return (
     <header className="flex flex-wrap items-center justify-between gap-3 py-1">
       <div className="reg-mark flex items-center gap-2.5 pl-1">
@@ -59,6 +64,14 @@ export default function Header() {
             </button>
           ))}
         </div>
+
+        <button
+          onClick={handleLogout}
+          title="Log out"
+          className="rounded-lg border border-paper-line px-3 py-2 text-xs font-bold text-ink-900/50 transition-colors hover:bg-danger-light hover:text-danger"
+        >
+          🔒 Log Out
+        </button>
       </div>
     </header>
   );
