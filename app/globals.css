@@ -28,6 +28,25 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+  /* A visible but slim, themed scrollbar — used where a mouse user needs to
+     see and drag the scrollbar directly, e.g. the transaction tab strip. */
+  .thin-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: theme("colors.ink.400") transparent;
+  }
+  .thin-scrollbar::-webkit-scrollbar {
+    height: 8px;
+  }
+  .thin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .thin-scrollbar::-webkit-scrollbar-thumb {
+    background-color: theme("colors.ink.400" / 50%);
+    border-radius: 9999px;
+  }
+  .thin-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: theme("colors.ink.400" / 75%);
+  }
   /* registration-mark corner accent — a nod to print-proof crop/reg marks */
   .reg-mark {
     position: relative;

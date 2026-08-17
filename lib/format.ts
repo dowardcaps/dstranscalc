@@ -6,14 +6,21 @@ export function makeId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 }
 
-export function getTransactionLabel(index: number): string {
-  let label = "";
-  let i = index;
-  while (i >= 0) {
-    label = String.fromCharCode((i % 26) + 65) + label;
-    i = Math.floor(i / 26) - 1;
+/**
+ * Finds the smallest positive integer not already used by an existing
+ * "Transaction N" name. So with transactions 1-7 open, closing #1 and
+ * adding a new one reuses "1" instead of jumping to 8 — 8 is only used
+ * once every number up to the current highest is taken again.
+ */
+export function nextTransactionNumber(existingNames: string[]): number {
+  const used = new Set<number>();
+  for (const name of existingNames) {
+    const match = name.match(/(\d+)\s*$/);
+    if (match) used.add(Number(match[1]));
   }
-  return label;
+  let n = 1;
+  while (used.has(n)) n++;
+  return n;
 }
 
 const DAY_NAMES = [

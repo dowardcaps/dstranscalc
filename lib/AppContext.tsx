@@ -20,7 +20,7 @@ import {
 } from "./types";
 import { DEFAULT_GROUP_COLORS, DEFAULT_SERVICES } from "./defaultData";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "./storage";
-import { dateKeyToLabel, getTransactionLabel, makeId, todayDateKey } from "./format";
+import { dateKeyToLabel, makeId, nextTransactionNumber, todayDateKey } from "./format";
 import { fetchCloudState, saveCloudState } from "./cloudStorage";
 import { ConfirmDialogState, CLOSED_CONFIRM } from "@/components/shared/ConfirmDialog";
 
@@ -179,7 +179,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               searchTerm: t.searchTerm || "",
               currentPage: t.currentPage || 1,
             }))
-          : [{ id: Date.now(), name: `Transaction ${getTransactionLabel(0)}`, cart: {}, searchTerm: "", currentPage: 1 }];
+          : [{ id: Date.now(), name: `Transaction ${nextTransactionNumber([])}`, cart: {}, searchTerm: "", currentPage: 1 }];
       setTransactions(restoredTx);
 
       const savedActiveTab = loadJSON<number>(STORAGE_KEYS.activeTab, 0);
@@ -243,7 +243,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         {
           id: Date.now(),
-          name: `Transaction ${getTransactionLabel(prev.length)}`,
+          name: `Transaction ${nextTransactionNumber(prev.map((t) => t.name))}`,
           cart: {},
           searchTerm: "",
           currentPage: 1,
