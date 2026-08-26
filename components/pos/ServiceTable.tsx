@@ -14,9 +14,14 @@ export default function ServiceTable() {
 
   const filtered = useMemo(() => {
     const term = searchTerm.toLowerCase();
-    return services.filter(
+    
+    // First filter by search term
+    let filteredServices = services.filter(
       (s) => s.name.toLowerCase().includes(term) || s.group.toLowerCase().includes(term)
     );
+    
+    // Then sort by group/category alphabetically
+    return filteredServices.sort((a, b) => a.group.localeCompare(b.group));
   }, [services, searchTerm]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
