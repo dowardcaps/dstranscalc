@@ -1,3 +1,4 @@
+// TransactionTabs.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -9,8 +10,6 @@ export default function TransactionTabs() {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
-  // Click-and-drag state. Kept in refs (not state) so the mousemove
-  // listener always reads the latest values without re-subscribing.
   const dragState = useRef({ dragging: false, startX: 0, startScrollLeft: 0, moved: false });
   const [isDragging, setIsDragging] = useState(false);
 
@@ -26,8 +25,6 @@ export default function TransactionTabs() {
     const el = scrollRef.current;
     if (!el) return;
 
-    // Vertical mouse wheel -> horizontal scroll, for mice without a
-    // horizontal scroll wheel.
     const onWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
         el.scrollLeft += e.deltaY;
@@ -43,12 +40,8 @@ export default function TransactionTabs() {
       el.removeEventListener("wheel", onWheel);
       ro.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactions.length]);
 
-  // Click-and-drag-to-scroll: grab anywhere on the strip and drag with the
-  // mouse cursor, like dragging a slider. A small movement threshold keeps
-  // ordinary clicks on a tab from being swallowed as a drag.
   const handleMouseDown = (e: React.MouseEvent) => {
     const el = scrollRef.current;
     if (!el) return;
@@ -80,24 +73,19 @@ export default function TransactionTabs() {
     };
   }, []);
 
-  // If the mouse genuinely dragged (not just clicked), swallow the click
-  // that would otherwise fire on mouseup so it doesn't switch tabs.
   const handleTabClick = (i: number) => {
     if (dragState.current.moved) return;
     switchTab(i);
   };
 
   return (
-    <div className="flex items-center gap-2 rounded-xl bg-ink-100/60 p-2">
-      {/* Scrollable region: only the existing tabs live in here, so the
-          Add button below never scrolls out of view no matter how many
-          transactions are open. */}
+    <div className="flex items-center gap-2 rounded-xl bg-gray-50 p-2 border border-gray-200">
       <div className="relative min-w-0 flex-1">
         {canScrollLeft && (
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-ink-100 to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-gray-50 to-transparent" />
         )}
         {canScrollRight && (
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-ink-100 to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-gray-50 to-transparent" />
         )}
 
         <div
@@ -114,8 +102,8 @@ export default function TransactionTabs() {
               onClick={() => handleTabClick(i)}
               className={`group flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-bold transition-colors ${
                 i === activeTabIndex
-                  ? "bg-ink-600 text-white"
-                  : "border border-paper-line bg-white text-ink-900/70 hover:border-ink-300"
+                  ? "bg-[#0b5be6] text-white"
+                  : "border border-gray-200 bg-white text-gray-700 hover:border-gray-400"
               }`}
             >
               {t.name}
@@ -126,7 +114,7 @@ export default function TransactionTabs() {
                     removeTab(i);
                   }}
                   className={`leading-none opacity-70 hover:opacity-100 ${
-                    i === activeTabIndex ? "text-white" : "text-ink-900/40"
+                    i === activeTabIndex ? "text-white" : "text-gray-400"
                   }`}
                 >
                   ×
@@ -137,12 +125,10 @@ export default function TransactionTabs() {
         </div>
       </div>
 
-      {/* Pinned outside the scroll area — always reachable, like the "+"
-          new-tab button in a browser. */}
       <button
         onClick={addNewTransaction}
         title="New transaction"
-        className="flex shrink-0 items-center justify-center gap-1.5 self-stretch rounded-lg bg-success px-3.5 text-sm font-bold text-white transition-colors hover:bg-success/90"
+        className="flex shrink-0 items-center justify-center gap-1.5 self-stretch rounded-lg bg-[#2d8f5e] px-3.5 text-sm font-bold text-white transition-colors hover:bg-[#237a4e]"
       >
         <span className="text-base leading-none">+</span>
         <span className="hidden sm:inline">New Transaction</span>

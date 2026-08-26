@@ -1,3 +1,4 @@
+// PaymentModal.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -35,19 +36,19 @@ export default function PaymentModal({ open, onClose }: { open: boolean; onClose
   return (
     <Modal open={open} onClose={onClose}>
       <div className="p-6">
-        <div className="mb-4 flex items-center justify-between border-b border-paper-line pb-3">
-          <h3 className="font-display text-lg font-bold text-ink-900">Complete Transaction</h3>
-          <button onClick={onClose} className="text-xl text-ink-900/40 hover:text-ink-900">
+        <div className="mb-4 flex items-center justify-between border-b border-gray-200 pb-3">
+          <h3 className="font-display text-lg font-bold text-[#1a2332]">Complete Transaction</h3>
+          <button onClick={onClose} className="text-xl text-gray-400 hover:text-[#1a2332]">
             ×
           </button>
         </div>
 
-        <div className="mb-5 flex items-center justify-between border-b border-paper-line pb-4 text-lg">
-          <span className="text-ink-900/60">Total Amount:</span>
-          <strong className="font-mono text-ink-900">{peso(cartTotal)}</strong>
+        <div className="mb-5 flex items-center justify-between border-b border-gray-200 pb-4 text-lg">
+          <span className="text-gray-500">Total Amount:</span>
+          <strong className="font-mono text-[#1a2332]">{peso(cartTotal)}</strong>
         </div>
 
-        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-ink-900/50">
+        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-gray-400">
           Cash Received (₱)
         </label>
         <input
@@ -57,13 +58,13 @@ export default function PaymentModal({ open, onClose }: { open: boolean; onClose
           onChange={(e) => setCash(e.target.value)}
           placeholder="Enter amount..."
           className={`w-full rounded-lg border-2 bg-white px-3.5 py-2.5 font-mono text-base outline-none transition-colors ${
-            short ? "border-danger" : "border-paper-line focus:border-ink-400"
+            short ? "border-red-500" : "border-gray-200 focus:border-gray-400"
           }`}
         />
 
-        <div className="mt-4 rounded-xl border-2 border-success/40 bg-success/10 p-4 text-center">
-          <span className="text-xs font-bold uppercase tracking-wide text-ink-900/50">Change</span>
-          <h2 className={`mt-1 font-display text-3xl font-bold ${short ? "text-danger" : "text-success"}`}>
+        <div className="mt-4 rounded-xl border-2 border-[#2d8f5e]/40 bg-[#2d8f5e]/10 p-4 text-center">
+          <span className="text-xs font-bold uppercase tracking-wide text-gray-400">Change</span>
+          <h2 className={`mt-1 font-display text-3xl font-bold ${short ? "text-red-500" : "text-[#2d8f5e]"}`}>
             {peso(change)}
           </h2>
         </div>
@@ -71,14 +72,14 @@ export default function PaymentModal({ open, onClose }: { open: boolean; onClose
         <div className="mt-6 flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="rounded-lg border border-paper-line bg-white px-5 py-2.5 text-sm font-semibold text-ink-900/70 hover:bg-paper"
+            className="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50"
           >
             Back
           </button>
           <button
             onClick={handleDone}
             disabled={submitting}
-            className="rounded-lg bg-ink-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-ink-700 disabled:opacity-60"
+            className="rounded-lg bg-[#1a2332] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#2a3a4f] disabled:opacity-60"
           >
             Done & Clear
           </button>
